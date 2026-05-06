@@ -1,122 +1,675 @@
-import { createSlice } from '@reduxjs/toolkit'
-import type { AdminUser } from '@/models/account'
-import type { AuthLoginRequest } from '@/models/authentication'
-import type { AuthLoginResponse } from '@/models/authentication'
-import { AuthService } from '@/services/access/accessService'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { authService } from '@/services/auth'
+import { tenantService } from '@/services/tenant'
+import { apiClient } from '@/services/core'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
-import { toErrorMessage } from './sliceUtils'
+import type { RootState } from '@/store/store'
+import type { AdminUser } from '@/models/account'
+import type {
+  IAgentItem,
+  IAgentListRequest,
+  IAgentListResponse,
+  IAuthActivateRequest,
+  IAuthActivateResponse,
+  IAuthForgotPasswordRequest,
+  IAuthForgotPasswordResponse,
+  IAuthLoginRequest,
+  IAuthLoginResponse,
+  IAuthRegisterRequest,
+  IAuthRegisterResponse,
+  IAuthResendOtpRequest,
+  IAuthResendOtpResponse,
+  IAuthResetPasswordRequest,
+  IAuthResetPasswordResponse,
+  ISelectAgentRequest,
+  ISelectAgentResponse,
+  ISelectRoleRequest,
+  ISelectRoleResponse,
+  ISelectTenantRequest,
+  ISelectTenantResponse,
+  ITenantItem,
+  ITenantListResponse,
+} from '@/models'
+import type { AuthRole } from '@/models/tenant'
 
-export interface AuthState {
+//#region types
+export type AuthStatus =
+  | 'idle'
+  | 'pending'
+  | 'needs_tenant'
+  | 'needs_role'
+  | 'needs_agent'
+  | 'authenticated'
+
+export interface IAuthState {
   user: AdminUser | null
+
+  tenants: ITenantItem[]
+  selectedTenant: ITenantItem | null
+
+  agents: IAgentItem[]
+  selectedAgent: IAgentItem | null
+
+  role: AuthRole | null
+
+  status: AuthStatus
+  pendingActivationUsername: string | null
+
   isAuthenticated: boolean
   isLoading: boolean
   isSubmitting: boolean
+
   error: string | null
+  errorCode: string | null
 }
 
-const initialState: AuthState = {
+export type AuthState = IAuthState
+//#endregion types
+
+//#region initial State
+const initialState: IAuthState = {
   user: null,
+
+  tenants: [],
+  selectedTenant: null,
+
+  agents: [],
+  selectedAgent: null,
+
+  role: null,
+
+  status: 'idle',
+  pendingActivationUsername: null,
+
   isAuthenticated: false,
   isLoading: false,
   isSubmitting: false,
+
   error: null,
+  errorCode: null,
+}
+//#endregion initial State
+
+//#region helpers
+const ACCOUNT_NOT_ACTIVATED_CODE = 'ACCOUNT_NOT_ACTIVATED'
+
+const toErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message
+  }
+
+  if (error && typeof error === 'object') {
+    const errorBag = error as Record<string, unknown>
+
+    if (typeof errorBag.message === 'string' && errorBag.message.trim().length > 0) {
+      return errorBag.message
+    }
+
+    if (typeof errorBag.Message === 'string' && errorBag.Message.trim().length > 0) {
+      return errorBag.Message
+    }
+
+    if (typeof errorBag.error === 'string' && errorBag.error.trim().length > 0) {
+      return errorBag.error
+    }
+  }
+
+  return fallback
 }
 
-export const loginAdmin = createAppAsyncThunk<AuthLoginResponse, AuthLoginRequest>(
-  'auth/loginAdmin',
+const isActivationRequiredError = (message: string): boolean => {
+  const normalizedMessage = message.toLowerCase()
+
+  return (
+    normalizedMessage.includes('not activated') ||
+    normalizedMessage.includes('not confirmed') ||
+    normalizedMessage.includes('not verified') ||
+    normalizedMessage.includes('account is inactive') ||
+    normalizedMessage.includes('chưa kích hoạt') ||
+    normalizedMessage.includes('chua kich hoat') ||
+    normalizedMessage.includes('chưa xác thực') ||
+    normalizedMessage.includes('chua xac thuc')
+  )
+}
+
+const setSubmitPending = (state: IAuthState): void => {
+  state.status = 'pending'
+  state.isSubmitting = true
+  state.isLoading = true
+  state.error = null
+  state.errorCode = null
+}
+
+const setActionPending = (state: IAuthState): void => {
+  state.isLoading = true
+  state.error = null
+  state.errorCode = null
+}
+
+const setRejected = (state: IAuthState, message: string): void => {
+  state.isLoading = false
+  state.isSubmitting = false
+  state.error = message
+  state.errorCode = null
+}
+
+const setSettled = (state: IAuthState): void => {
+  state.isLoading = false
+  state.isSubmitting = false
+  state.error = null
+  state.errorCode = null
+}
+
+const clearStoredAuthTokens = (): void => {
+  apiClient.clearTokens()
+}
+//#endregion helpers
+
+//#region auth thunks
+export const loginThunk = createAppAsyncThunk<IAuthLoginResponse, IAuthLoginRequest>(
+  'auth/login',
   async (payload, { rejectWithValue }) => {
     try {
-      return await AuthService.login(payload)
+      return await authService.login(payload)
     } catch (error) {
       return rejectWithValue(toErrorMessage(error, 'Unable to login'))
     }
   },
 )
 
-export const fetchMyProfile = createAppAsyncThunk<AdminUser>(
+export const registerThunk = createAppAsyncThunk<
+  IAuthRegisterResponse,
+  IAuthRegisterRequest
+>('auth/register', async (payload, { rejectWithValue }) => {
+  try {
+    return await authService.register(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to register'))
+  }
+})
+
+export const activateThunk = createAppAsyncThunk<
+  IAuthActivateResponse,
+  IAuthActivateRequest
+>('auth/activate', async (payload, { rejectWithValue }) => {
+  try {
+    return await authService.activate(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to activate account'))
+  }
+})
+
+export const resendOtpThunk = createAppAsyncThunk<
+  IAuthResendOtpResponse,
+  IAuthResendOtpRequest
+>('auth/resendOtp', async (payload, { rejectWithValue }) => {
+  try {
+    return await authService.resendOtp(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to resend OTP'))
+  }
+})
+
+export const forgotPasswordThunk = createAppAsyncThunk<
+  IAuthForgotPasswordResponse,
+  IAuthForgotPasswordRequest
+>('auth/forgotPassword', async (payload, { rejectWithValue }) => {
+  try {
+    return await authService.forgotPassword(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to send reset password request'))
+  }
+})
+
+export const resetPasswordThunk = createAppAsyncThunk<
+  IAuthResetPasswordResponse,
+  IAuthResetPasswordRequest
+>('auth/resetPassword', async (payload, { rejectWithValue }) => {
+  try {
+    return await authService.resetPassword(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to reset password'))
+  }
+})
+
+export const fetchMyProfileThunk = createAppAsyncThunk<AdminUser, void>(
   'auth/fetchMyProfile',
   async (_, { rejectWithValue }) => {
     try {
-      return await AuthService.getMe()
+      const response = await authService.getMe()
+      return response.user
     } catch (error) {
       return rejectWithValue(toErrorMessage(error, 'Unable to fetch profile'))
     }
   },
 )
 
-export const logoutAdmin = createAppAsyncThunk<void>(
-  'auth/logoutAdmin',
+export const logoutThunk = createAppAsyncThunk<void, void>(
+  'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      await AuthService.logout()
+      await authService.logout()
+      clearStoredAuthTokens()
     } catch (error) {
-      AuthService.clearStoredTokens()
+      clearStoredAuthTokens()
       return rejectWithValue(toErrorMessage(error, 'Unable to logout'))
     }
   },
 )
+//#endregion auth thunks
 
+//#region tenant / role / agent thunks
+export const fetchTenantsThunk = createAppAsyncThunk<ITenantListResponse, void>(
+  'auth/fetchTenants',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState()
+      return await tenantService.listTenants(auth.selectedTenant ?? undefined)
+    } catch (error) {
+      return rejectWithValue(toErrorMessage(error, 'Unable to fetch tenants'))
+    }
+  },
+)
+
+export const selectTenantThunk = createAppAsyncThunk<
+  ISelectTenantResponse,
+  ISelectTenantRequest
+>('auth/selectTenant', async (payload, { rejectWithValue }) => {
+  try {
+    return await tenantService.selectTenant(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to select tenant'))
+  }
+})
+
+export const selectRoleThunk = createAppAsyncThunk<
+  ISelectRoleResponse,
+  ISelectRoleRequest
+>('auth/selectRole', async (payload, { rejectWithValue }) => {
+  try {
+    return await tenantService.selectRole(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to select role'))
+  }
+})
+
+export const fetchAgentsThunk = createAppAsyncThunk<
+  IAgentListResponse,
+  IAgentListRequest | undefined
+>('auth/fetchAgents', async (payload, { rejectWithValue }) => {
+  try {
+    return await tenantService.listAgents(payload ?? {})
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to fetch agents'))
+  }
+})
+
+export const selectAgentThunk = createAppAsyncThunk<
+  ISelectAgentResponse,
+  ISelectAgentRequest
+>('auth/selectAgent', async (payload, { rejectWithValue }) => {
+  try {
+    return await tenantService.selectAgent(payload)
+  } catch (error) {
+    return rejectWithValue(toErrorMessage(error, 'Unable to select agent'))
+  }
+})
+//#endregion tenant / role / agent thunks
+
+//#region Slice
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    clearAuth(state) {
-      state.user = null
-      state.isAuthenticated = false
+    //#region error reducers
+    clearAuthError(state) {
       state.error = null
-      AuthService.clearStoredTokens()
+      state.errorCode = null
     },
-    setAuthUser(state, action: { payload: AdminUser | null }) {
+    //#endregion error reducers
+
+    //#region activation reducers
+    setPendingActivationUsername(state, action: PayloadAction<string | null>) {
+      state.pendingActivationUsername = action.payload
+    },
+    //#endregion activation reducers
+
+    //#region compatibility reducers
+    setAuthUser(state, action: PayloadAction<AdminUser | null>) {
       state.user = action.payload
       state.isAuthenticated = Boolean(action.payload)
+
+      if (action.payload) {
+        state.status = 'authenticated'
+      } else {
+        state.status = 'idle'
+      }
     },
+
+    clearAuth() {
+      clearStoredAuthTokens()
+      return initialState
+    },
+    //#endregion compatibility reducers
+
+    //#region reset reducers
+    resetAuthState() {
+      return initialState
+    },
+    //#endregion reset reducers
   },
   extraReducers: (builder) => {
     builder
-      .addCase(loginAdmin.pending, (state) => {
-        state.isSubmitting = true
-        state.error = null
+      //#region login
+      .addCase(loginThunk.pending, (state) => {
+        setSubmitPending(state)
       })
-      .addCase(loginAdmin.fulfilled, (state, action) => {
-        state.isSubmitting = false
+      .addCase(loginThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
         state.user = action.payload.user
-        state.isAuthenticated = true
-      })
-      .addCase(loginAdmin.rejected, (state, action) => {
-        state.isSubmitting = false
-        state.error = action.payload ?? 'Unable to login'
-      })
-      .addCase(fetchMyProfile.pending, (state) => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchMyProfile.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.user = action.payload
-        state.isAuthenticated = true
-      })
-      .addCase(fetchMyProfile.rejected, (state, action) => {
-        state.isLoading = false
-        state.user = null
+        state.status = 'needs_tenant'
         state.isAuthenticated = false
-        state.error = action.payload ?? 'Unable to fetch profile'
+        state.pendingActivationUsername = null
       })
-      .addCase(logoutAdmin.pending, (state) => {
+      .addCase(loginThunk.rejected, (state, action) => {
+        const message = action.payload ?? 'Unable to login'
+
+        state.isLoading = false
+        state.isSubmitting = false
+
+        if (isActivationRequiredError(message)) {
+          state.pendingActivationUsername = action.meta.arg.username
+          state.error = message
+          state.errorCode = ACCOUNT_NOT_ACTIVATED_CODE
+          state.status = 'idle'
+          state.isAuthenticated = false
+          return
+        }
+
+        state.error = message
+        state.errorCode = null
+        state.status = 'idle'
+        state.isAuthenticated = false
+      })
+      //#endregion login
+
+      //#region register
+      .addCase(registerThunk.pending, (state) => {
+        setSubmitPending(state)
+      })
+      .addCase(registerThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.status = 'idle'
+        state.isAuthenticated = false
+        state.pendingActivationUsername = action.meta.arg.username
+      })
+      .addCase(registerThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to register')
+        state.status = 'idle'
+      })
+      //#endregion register
+
+      //#region activate
+      .addCase(activateThunk.pending, (state) => {
+        setSubmitPending(state)
+      })
+      .addCase(activateThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        if (action.payload.user) {
+          state.user = action.payload.user
+        }
+
+        state.status = 'needs_tenant'
+        state.isAuthenticated = false
+        state.pendingActivationUsername = null
+      })
+      .addCase(activateThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to activate account')
+        state.status = 'idle'
+      })
+      //#endregion activate
+
+      //#region resend OTP
+      .addCase(resendOtpThunk.pending, (state) => {
         state.isSubmitting = true
+        state.error = null
+        state.errorCode = null
       })
-      .addCase(logoutAdmin.fulfilled, (state) => {
+      .addCase(resendOtpThunk.fulfilled, (state) => {
         state.isSubmitting = false
+        state.error = null
+        state.errorCode = null
+      })
+      .addCase(resendOtpThunk.rejected, (state, action) => {
+        state.isSubmitting = false
+        state.error = action.payload ?? 'Unable to resend OTP'
+        state.errorCode = null
+      })
+      //#endregion resend OTP
+
+      //#region forgot password
+      .addCase(forgotPasswordThunk.pending, (state) => {
+        setSubmitPending(state)
+      })
+      .addCase(forgotPasswordThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.status = 'idle'
+        state.pendingActivationUsername = action.meta.arg.username
+      })
+      .addCase(forgotPasswordThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to send reset password request')
+        state.status = 'idle'
+      })
+      //#endregion forgot password
+
+      //#region reset password
+      .addCase(resetPasswordThunk.pending, (state) => {
+        setSubmitPending(state)
+      })
+      .addCase(resetPasswordThunk.fulfilled, (state) => {
+        setSettled(state)
+
+        state.status = 'idle'
+        state.pendingActivationUsername = null
+      })
+      .addCase(resetPasswordThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to reset password')
+        state.status = 'idle'
+      })
+      //#endregion reset password
+
+      //#region profile
+      .addCase(fetchMyProfileThunk.pending, (state) => {
+        setActionPending(state)
+      })
+      .addCase(fetchMyProfileThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.user = action.payload
+
+        if (state.status === 'idle' || state.status === 'pending') {
+          state.status = 'authenticated'
+          state.isAuthenticated = true
+        }
+      })
+      .addCase(fetchMyProfileThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to fetch profile')
+
         state.user = null
         state.isAuthenticated = false
+        state.status = 'idle'
       })
-      .addCase(logoutAdmin.rejected, (state, action) => {
-        state.isSubmitting = false
-        state.user = null
+      //#endregion profile
+
+      //#region fetch tenants
+      .addCase(fetchTenantsThunk.pending, (state) => {
+        setActionPending(state)
+      })
+      .addCase(fetchTenantsThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.tenants = action.payload.items
+      })
+      .addCase(fetchTenantsThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to fetch tenants')
+      })
+      //#endregion fetch tenants
+
+      //#region select tenant
+      .addCase(selectTenantThunk.pending, (state) => {
+        setActionPending(state)
+      })
+      .addCase(selectTenantThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.selectedTenant = action.payload.tenant
+        state.selectedAgent = null
+        state.agents = []
+        state.role = null
+        state.status = 'needs_role'
         state.isAuthenticated = false
-        state.error = action.payload ?? 'Unable to logout'
       })
+      .addCase(selectTenantThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to select tenant')
+      })
+      //#endregion select tenant
+
+      //#region select role
+      .addCase(selectRoleThunk.pending, (state) => {
+        setActionPending(state)
+      })
+      .addCase(selectRoleThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        const selectedRole = action.payload.role
+
+        state.role = selectedRole
+        state.selectedAgent = null
+
+        if (selectedRole === 'agent') {
+          state.status = 'needs_agent'
+          state.isAuthenticated = false
+          return
+        }
+
+        state.status = 'authenticated'
+        state.isAuthenticated = true
+      })
+      .addCase(selectRoleThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to select role')
+      })
+      //#endregion select role
+
+      //#region fetch agents
+      .addCase(fetchAgentsThunk.pending, (state) => {
+        setActionPending(state)
+      })
+      .addCase(fetchAgentsThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.agents = action.payload.items
+      })
+      .addCase(fetchAgentsThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to fetch agents')
+      })
+      //#endregion fetch agents
+
+      //#region select agent
+      .addCase(selectAgentThunk.pending, (state) => {
+        setActionPending(state)
+      })
+      .addCase(selectAgentThunk.fulfilled, (state, action) => {
+        setSettled(state)
+
+        state.selectedAgent = action.payload.agent
+        state.status = 'authenticated'
+        state.isAuthenticated = true
+      })
+      .addCase(selectAgentThunk.rejected, (state, action) => {
+        setRejected(state, action.payload ?? 'Unable to select agent')
+      })
+      //#endregion select agent
+
+      //#region logout
+      .addCase(logoutThunk.pending, (state) => {
+        state.isLoading = true
+        state.isSubmitting = true
+        state.error = null
+        state.errorCode = null
+      })
+      .addCase(logoutThunk.fulfilled, () => {
+        return initialState
+      })
+      .addCase(logoutThunk.rejected, () => {
+        return initialState
+      })
+    //#endregion logout
   },
 })
+//#endregion slice
 
-export const { clearAuth, setAuthUser } = authSlice.actions
+//#region actions
+export const {
+  clearAuthError,
+  setPendingActivationUsername,
+  resetAuthState,
+  setAuthUser,
+  clearAuth,
+} = authSlice.actions
+//#endregion actions
+
+//#region thunk
+export const loginAdmin = loginThunk
+export const logoutAdmin = logoutThunk
+export const fetchMyProfile = fetchMyProfileThunk
+//#endregion thunk
+
+//#region selectors
+export const selectAuthState = (state: RootState) => state.auth
+
+export const selectAuthUser = (state: RootState) => state.auth.user
+
+export const selectAuthStatus = (state: RootState) => state.auth.status
+
+export const selectAuthError = (state: RootState) => state.auth.error
+
+export const selectAuthErrorCode = (state: RootState) => state.auth.errorCode
+
+export const selectAuthIsLoading = (state: RootState) => state.auth.isLoading
+
+export const selectAuthIsSubmitting = (state: RootState) => state.auth.isSubmitting
+
+export const selectIsAuthenticated = (state: RootState) =>
+  state.auth.status === 'authenticated' || state.auth.isAuthenticated
+
+export const selectTenants = (state: RootState) => state.auth.tenants
+
+export const selectSelectedTenant = (state: RootState) => state.auth.selectedTenant
+
+export const selectAgents = (state: RootState) => state.auth.agents
+
+export const selectSelectedAgent = (state: RootState) => state.auth.selectedAgent
+
+export const selectAuthRole = (state: RootState) => state.auth.role
+
+export const selectPendingActivationUsername = (state: RootState) =>
+  state.auth.pendingActivationUsername
+
+export const selectNeedsTenant = (state: RootState) => state.auth.status === 'needs_tenant'
+
+export const selectNeedsRole = (state: RootState) => state.auth.status === 'needs_role'
+
+export const selectNeedsAgent = (state: RootState) => state.auth.status === 'needs_agent'
+//#endregion selectors
+
+//#region reducer
 export default authSlice.reducer
+//#endregion reducer
