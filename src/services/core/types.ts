@@ -1,16 +1,29 @@
+//#region types
 export type ApiRecord = Record<string, unknown>
 
 export type PrimitiveQueryValue = string | number | boolean | null | undefined | Date
-export type QueryValue = PrimitiveQueryValue | PrimitiveQueryValue[] | ApiRecord
+
+export type QueryValue =
+  | PrimitiveQueryValue
+  | PrimitiveQueryValue[]
+  | IQueryObjectValue
+  | IQueryObjectValue[]
+
 export type QueryParams = Record<string, QueryValue>
 
 export type EntityId = string | number
+//#endregion types
 
-export interface DataResponse<TData> {
+//#region interfaces
+export interface IQueryObjectValue {
+  [key: string]: QueryValue
+}
+
+export interface IDataResponse<TData> {
   data: TData
 }
 
-export interface PaginatedResponse<TData> {
+export interface IPaginatedResponse<TData> {
   data: TData[]
   total: number
   page: number
@@ -18,26 +31,27 @@ export interface PaginatedResponse<TData> {
   totalPages: number
 }
 
-export interface SuccessResponse {
+export interface ISuccessResponse {
   success: boolean
   [key: string]: unknown
 }
 
-export interface AuthTokens {
+export interface IAuthTokens {
   accessToken: string
   refreshToken: string
   tokenExpires?: number
 }
 
-export interface TokenStorage {
-  getTokens(): AuthTokens | null
-  setTokens(tokens: AuthTokens): void
+export interface ITokenStorage {
+  getTokens(): IAuthTokens | null
+  setTokens(tokens: IAuthTokens): void
   clearTokens(): void
 }
 
-export interface LoginResponse {
+export interface ILoginResponse {
   token: string
   refreshToken: string
   tokenExpires?: number
   [key: string]: unknown
 }
+//#endregion interfaces

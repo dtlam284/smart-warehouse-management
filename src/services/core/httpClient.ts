@@ -2,16 +2,16 @@ import { API_ENDPOINTS } from '@/constants/api'
 import { ApiError } from './apiError'
 import type {
   ApiRecord,
-  AuthTokens,
-  LoginResponse,
+  IAuthTokens,
+  ILoginResponse,
   QueryParams,
   QueryValue,
-  TokenStorage,
+  ITokenStorage,
 } from './types'
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
-export interface RequestOptions {
+export interface IRequestOptions {
   body?: unknown
   headers?: HeadersInit
   query?: QueryParams
@@ -21,10 +21,10 @@ export interface RequestOptions {
   retryOnUnauthorized?: boolean
 }
 
-export interface HttpClientOptions {
+export interface IHttpClientOptions {
   baseUrl: string
   timeoutMs: number
-  tokenStorage: TokenStorage
+  tokenStorage: ITokenStorage
   refreshPath?: string
 }
 
@@ -63,7 +63,20 @@ const appendQueryParam = (
   if (Array.isArray(value)) {
     value
       .filter((entry) => entry !== undefined && entry !== null)
-      .forEach((entry) => searchParams.append(key, normalizeQueryValue(entry)))
+      .forEach((entry) => {
+        if (entry instanceof Date) {
+          searchParams.append(key, entry.toISOString())
+          return
+        }
+
+        if (typeof entry === 'object') {
+          searchParams.append(key, JSON.stringify(entry))
+          return
+        }
+
+        searchParams.append(key, normalizeQueryValue(entry))
+      })
+
     return
   }
 
@@ -165,7 +178,7 @@ const extractErrorMessage = (payload: unknown, fallback: string): string => {
   return fallback
 }
 
-const isRefreshResponse = (payload: unknown): payload is LoginResponse => {
+const isRefreshResponse = (payload: unknown): payload is ILoginResponse => {
   if (!payload || typeof payload !== 'object') {
     return false
   }
@@ -177,22 +190,22 @@ const isRefreshResponse = (payload: unknown): payload is LoginResponse => {
 export class HttpClient {
   private readonly baseUrl: string
   private readonly timeoutMs: number
-  private readonly tokenStorage: TokenStorage
+  private readonly tokenStorage: ITokenStorage
   private readonly refreshPath: string
   private refreshPromise: Promise<string | null> | null = null
 
-  constructor(options: HttpClientOptions) {
+  constructor(options: IHttpClientOptions) {
     this.baseUrl = options.baseUrl
     this.timeoutMs = options.timeoutMs
     this.tokenStorage = options.tokenStorage
     this.refreshPath = options.refreshPath ?? API_ENDPOINTS.auth.refresh
   }
 
-  get tokens(): AuthTokens | null {
+  get tokens(): IAuthTokens | null {
     return this.tokenStorage.getTokens()
   }
 
-  setTokens(tokens: AuthTokens): void {
+  setTokens(tokens: IAuthTokens): void {
     this.tokenStorage.setTokens(tokens)
   }
 
@@ -200,30 +213,30 @@ export class HttpClient {
     this.tokenStorage.clearTokens()
   }
 
-  async get<TResponse>(path: string, options: Omit<RequestOptions, 'body'> = {}): Promise<TResponse> {
+  async get<TResponse>(path: string, options: Omit<IRequestOptions, 'body'> = {}): Promise<TResponse> {
     return this.request<TResponse>('GET', path, options)
   }
 
-  async post<TResponse>(path: string, body?: unknown, options: Omit<RequestOptions, 'body'> = {}): Promise<TResponse> {
+  async post<TResponse>(path: string, body?: unknown, options: Omit<IRequestOptions, 'body'> = {}): Promise<TResponse> {
     return this.request<TResponse>('POST', path, { ...options, body })
   }
 
-  async patch<TResponse>(path: string, body?: unknown, options: Omit<RequestOptions, 'body'> = {}): Promise<TResponse> {
+  async patch<TResponse>(path: string, body?: unknown, options: Omit<IRequestOptions, 'body'> = {}): Promise<TResponse> {
     return this.request<TResponse>('PATCH', path, { ...options, body })
   }
 
-  async put<TResponse>(path: string, body?: unknown, options: Omit<RequestOptions, 'body'> = {}): Promise<TResponse> {
+  async put<TResponse>(path: string, body?: unknown, options: Omit<IRequestOptions, 'body'> = {}): Promise<TResponse> {
     return this.request<TResponse>('PUT', path, { ...options, body })
   }
 
-  async delete<TResponse>(path: string, options: RequestOptions = {}): Promise<TResponse> {
+  async delete<TResponse>(path: string, options: Omit<IRequestOptions, 'body'> = {}): Promise<TResponse> {
     return this.request<TResponse>('DELETE', path, options)
   }
 
   async request<TResponse>(
     method: HttpMethod,
     path: string,
-    options: RequestOptions = {},
+    options: IRequestOptions = {},
   ): Promise<TResponse> {
     const requiresAuth = options.requiresAuth ?? true
     const retryOnUnauthorized = options.retryOnUnauthorized ?? true
