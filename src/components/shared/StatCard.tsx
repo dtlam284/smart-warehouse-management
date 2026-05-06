@@ -1,7 +1,7 @@
 import * as React from "react"
-import { cn } from "../../utils"
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card"
 import { motion } from "motion/react"
+import { cn } from "../../utils"
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 
 export interface StatCardProps {
   title: string
