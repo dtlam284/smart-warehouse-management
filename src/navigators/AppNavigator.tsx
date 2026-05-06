@@ -5,6 +5,7 @@ import { ErrorBoundaryScreen } from "../screens/ErrorBoundaryScreen"
 
 // Static imports for critical auth paths (must load immediately)
 import { LoginScreen } from "../screens/Auth/LoginScreen"
+import { RegisterScreen } from "../screens/Auth/RegisterScreen"
 import { SessionRequiredScreen } from "../screens/Auth/SessionRequiredScreen"
 import { NotFoundScreen } from "../screens/NotFound/NotFoundScreen"
 
@@ -48,6 +49,11 @@ export const router = createBrowserRouter([
   {
     path: "/auth/login",
     Component: LoginScreen,
+    ErrorBoundary: ErrorBoundaryScreen,
+  },
+  {
+    path: "/auth/register",
+    Component: RegisterScreen,
     ErrorBoundary: ErrorBoundaryScreen,
   },
   {

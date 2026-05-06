@@ -1,42 +1,23 @@
-import { ShieldCheck } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
 import { useAppDispatch, useAppSelector } from '@/store'
-import { clearAuthError, loginThunk, selectAuthState } from '@/store/slices/authSlice'
+import { clearAuthError, registerThunk, selectAuthState } from '@/store/slices/authSlice'
 
 //#region interfaces
-interface ILoginFormValues {
+interface IRegisterFormValues {
   username: string
+  fullName: string
   password: string
+  confirmPassword: string
 }
 //#endregion interfaces
 
-//#region helpers
-const isActivationRequiredMessage = (message?: string): boolean => {
-  if (!message) {
-    return false
-  }
-
-  const normalizedMessage = message.toLowerCase()
-
-  return (
-    normalizedMessage.includes('not activated') ||
-    normalizedMessage.includes('not confirmed') ||
-    normalizedMessage.includes('not verified') ||
-    normalizedMessage.includes('account is inactive') ||
-    normalizedMessage.includes('chưa kích hoạt') ||
-    normalizedMessage.includes('chua kich hoat') ||
-    normalizedMessage.includes('chưa xác thực') ||
-    normalizedMessage.includes('chua xac thuc')
-  )
-}
-//#endregion helpers
-
-//#region login screen
-export function LoginScreen() {
+//#region register screen
+export function RegisterScreen() {
   //#region hooks
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -45,16 +26,20 @@ export function LoginScreen() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
-  } = useForm<ILoginFormValues>({
+  } = useForm<IRegisterFormValues>({
     defaultValues: {
       username: '',
+      fullName: '',
       password: '',
+      confirmPassword: '',
     },
   })
   //#endregion hooks
 
   //#region derived state
+  const password = watch('password')
   const isBusy = isSubmitting || auth.isSubmitting || auth.isLoading
   //#endregion derived state
 
@@ -71,25 +56,18 @@ export function LoginScreen() {
     }
   }
 
-  const onSubmit = async (values: ILoginFormValues) => {
+  const onSubmit = async (values: IRegisterFormValues) => {
     const result = await dispatch(
-      loginThunk({
+      registerThunk({
         username: values.username.trim(),
+        fullName: values.fullName.trim(),
         password: values.password,
+        confirmPassword: values.confirmPassword,
       }),
     )
 
-    if (loginThunk.fulfilled.match(result)) {
-      navigate('/auth/select-tenant', { replace: true })
-      return
-    }
-
-    if (loginThunk.rejected.match(result)) {
-      const message = result.payload
-
-      if (isActivationRequiredMessage(message)) {
-        navigate('/auth/activate', { replace: true })
-      }
+    if (registerThunk.fulfilled.match(result)) {
+      navigate('/auth/activate', { replace: true })
     }
   }
   //#endregion handlers
@@ -101,15 +79,15 @@ export function LoginScreen() {
         {/*#region header */}
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-            <ShieldCheck className="h-6 w-6" />
+            <UserPlus className="h-6 w-6" />
           </div>
 
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-            Admin Sign In
+            Create Account
           </h1>
 
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Use your username, email, or phone number to access Base CMS.
+            Register with your username, email, or phone number.
           </p>
         </div>
         {/*#endregion header */}
@@ -122,9 +100,9 @@ export function LoginScreen() {
         ) : null}
         {/*#endregion redux error */}
 
-        {/*#region login form */}
+        {/*#region Register Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/*#region username field */}
+          {/*#region Username Field */}
           <div className="space-y-1.5">
             <label
               htmlFor="username"
@@ -141,7 +119,7 @@ export function LoginScreen() {
               disabled={isBusy}
               aria-invalid={Boolean(errors.username)}
               {...register('username', {
-                ...authSchemas.login.username,
+                ...authSchemas.register.username,
                 onChange: clearErrorIfNeeded,
               })}
             />
@@ -152,9 +130,39 @@ export function LoginScreen() {
               </p>
             ) : null}
           </div>
-          {/*#endregion username field */}
+          {/*#endregion Username Field */}
 
-          {/*#region password field */}
+          {/*#region Full Name Field */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="fullName"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              Full name
+            </label>
+
+            <Input
+              id="fullName"
+              type="text"
+              autoComplete="name"
+              placeholder="Enter your full name"
+              disabled={isBusy}
+              aria-invalid={Boolean(errors.fullName)}
+              {...register('fullName', {
+                ...authSchemas.register.fullName,
+                onChange: clearErrorIfNeeded,
+              })}
+            />
+
+            {errors.fullName?.message ? (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {errors.fullName.message}
+              </p>
+            ) : null}
+          </div>
+          {/*#endregion Full Name Field */}
+
+          {/*#region Password Field */}
           <div className="space-y-1.5">
             <label
               htmlFor="password"
@@ -166,12 +174,12 @@ export function LoginScreen() {
             <Input
               id="password"
               type="password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
+              autoComplete="new-password"
+              placeholder="Create a password"
               disabled={isBusy}
               aria-invalid={Boolean(errors.password)}
               {...register('password', {
-                ...authSchemas.login.password,
+                ...authSchemas.register.password,
                 onChange: clearErrorIfNeeded,
               })}
             />
@@ -182,39 +190,61 @@ export function LoginScreen() {
               </p>
             ) : null}
           </div>
-          {/*#endregion password field */}
+          {/*#endregion Password Field */}
 
-          {/*#region form actions */}
-          <div className="flex items-center justify-end">
-            <Link
-              to="/auth/forgot-password"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          {/*#region Confirm Password Field */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="confirmPassword"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200"
             >
-              Forgot password?
-            </Link>
+              Confirm password
+            </label>
+
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Confirm your password"
+              disabled={isBusy}
+              aria-invalid={Boolean(errors.confirmPassword)}
+              {...register('confirmPassword', {
+                ...authSchemas.register.confirmPassword,
+                validate: (value) => value === password || 'Passwords do not match',
+                onChange: clearErrorIfNeeded,
+              })}
+            />
+
+            {errors.confirmPassword?.message ? (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                {errors.confirmPassword.message}
+              </p>
+            ) : null}
           </div>
+          {/*#endregion Confirm Password Field */}
 
+          {/*#region Submit Button */}
           <Button type="submit" disabled={isBusy} className="w-full">
-            {isBusy ? 'Signing in...' : 'Sign in'}
+            {isBusy ? 'Creating account...' : 'Create account'}
           </Button>
-          {/*#endregion form actions */}
+          {/*#endregion Submit Button */}
         </form>
-        {/*#endregion login form */}
+        {/*#endregion Register Form */}
 
-        {/*#region footer */}
+        {/*#region Footer */}
         <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-          Don&apos;t have an account?{' '}
+          Already have an account?{' '}
           <Link
-            to="/auth/register"
+            to="/auth/login"
             className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           >
-            Create one
+            Sign in
           </Link>
         </p>
-        {/*#endregion footer */}
+        {/*#endregion Footer */}
       </div>
     </div>
   )
   //#endregion render
 }
-//#endregion login ccreen
+//#endregion register screen
