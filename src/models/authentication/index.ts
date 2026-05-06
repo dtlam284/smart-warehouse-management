@@ -1,3 +1,6 @@
 export * from './AuthenticationInterface'
 export * from './AuthenticationDTO'
 export * from './AuthenticationResponse'
+export * from '../tenant/TenantInterface'
+export * from '../tenant/TenantDTO'
+export * from '../tenant/TenantResponse'
