@@ -1,9 +1,3 @@
-/*
-Rule cho việc nhập form
-- Username: bắt buộc nhập, tối thiểu 3 kí tự
-- Password: bắt buộc, tối thiểu 6
-*/
-
 import type { RegisterOptions } from "react-hook-form";
 
 //#region shared validation rules
@@ -61,6 +55,48 @@ export const authSchemas = {
                 value: 6,
                 message: 'Please enter your password again',
             },
+        } satisfies RegisterOptions,
+    },
+
+    otp: {
+        code: {
+            required: 'OTP is required.',
+            pattern: {
+                value: /^\d{6}$/,
+                message: 'OTP must be exactly 6 digits',
+            },  
+        } satisfies RegisterOptions,
+    },
+
+    forgotPassword: {
+        username: {
+            required: requiredMessage,
+            minLength: {
+                value: 3,
+                message: 'Username must be at least 3 characters',
+            },
+        } satisfies RegisterOptions,
+    },
+
+    resetPassword: {
+        otp: {
+            required: 'OTP is required.',
+            pattern: {
+                value: /^\d{6}$/,
+                message: 'OTP must be exactly 6 digits',
+            },
+        } satisfies RegisterOptions,
+
+        newPassword: {
+            required: requiredMessage,
+            minLength: {
+                value: 6,
+                message: 'New password must be at least 6 characters',
+            },
+        } satisfies RegisterOptions,
+
+        confirmNewPassword: {
+            required: 'Confirm password is required',
         } satisfies RegisterOptions,
     },
 } as const
