@@ -1,6 +1,7 @@
 import { env } from '@/config/env'
-import type { AuthTokens, TokenStorage } from './types'
+import type { IAuthTokens, ITokenStorage } from './types'
 
+//#region local storage
 const canUseLocalStorage = (): boolean => {
   try {
     return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
@@ -8,11 +9,16 @@ const canUseLocalStorage = (): boolean => {
     return false
   }
 }
+//#endregion local storage
 
-let inMemoryTokens: AuthTokens | null = null
+//#region token fallback
+let inMemoryTokens: IAuthTokens | null = null
+//#endregion token fallback
 
-export class BrowserTokenStorage implements TokenStorage {
-  getTokens(): AuthTokens | null {
+//#region browser token storage
+export class BrowserTokenStorage implements ITokenStorage {
+  //#region read token
+  getTokens(): IAuthTokens | null {
     if (canUseLocalStorage()) {
       const raw = window.localStorage.getItem(env.tokenStorageKey)
       if (!raw) {
@@ -20,7 +26,7 @@ export class BrowserTokenStorage implements TokenStorage {
       }
 
       try {
-        const parsed = JSON.parse(raw) as AuthTokens
+        const parsed = JSON.parse(raw) as IAuthTokens
 
         if (!parsed.accessToken || !parsed.refreshToken) {
           return null
@@ -34,15 +40,19 @@ export class BrowserTokenStorage implements TokenStorage {
 
     return inMemoryTokens
   }
+  //#endregion read token
 
-  setTokens(tokens: AuthTokens): void {
+  //#region save token
+  setTokens(tokens: IAuthTokens): void {
     inMemoryTokens = tokens
 
     if (canUseLocalStorage()) {
       window.localStorage.setItem(env.tokenStorageKey, JSON.stringify(tokens))
     }
   }
+  //#endregion save token
 
+  //#region clear token
   clearTokens(): void {
     inMemoryTokens = null
 
@@ -50,6 +60,10 @@ export class BrowserTokenStorage implements TokenStorage {
       window.localStorage.removeItem(env.tokenStorageKey)
     }
   }
+  //#endregion clear token
 }
+//#endregion browser token storage
 
+//#region token storage
 export const tokenStorage = new BrowserTokenStorage()
+//#endregion token storage

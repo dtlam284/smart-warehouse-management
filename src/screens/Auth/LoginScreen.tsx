@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
 import { useAppDispatch, useAppSelector } from '@/store'
-import { clearAuthError, loginThunk, selectAuthState } from '@/store/slices/authSlice'
+import { 
+  clearAuthError, 
+  loginThunk, 
+  selectAuthState 
+} from '@/store/slices/authSlice'
+import { isActivationRequiredMessage } from './utils'
 
 //#region interfaces
 interface ILoginFormValues {
@@ -13,27 +18,6 @@ interface ILoginFormValues {
   password: string
 }
 //#endregion interfaces
-
-//#region helpers
-const isActivationRequiredMessage = (message?: string): boolean => {
-  if (!message) {
-    return false
-  }
-
-  const normalizedMessage = message.toLowerCase()
-
-  return (
-    normalizedMessage.includes('not activated') ||
-    normalizedMessage.includes('not confirmed') ||
-    normalizedMessage.includes('not verified') ||
-    normalizedMessage.includes('account is inactive') ||
-    normalizedMessage.includes('chưa kích hoạt') ||
-    normalizedMessage.includes('chua kich hoat') ||
-    normalizedMessage.includes('chưa xác thực') ||
-    normalizedMessage.includes('chua xac thuc')
-  )
-}
-//#endregion helpers
 
 //#region login screen
 export function LoginScreen() {
@@ -105,12 +89,12 @@ export function LoginScreen() {
           </div>
 
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-            Admin Sign In
+            Sign In
           </h1>
 
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          {/* <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             Use your username, email, or phone number to access Base CMS.
-          </p>
+          </p> */}
         </div>
         {/*#endregion header */}
 

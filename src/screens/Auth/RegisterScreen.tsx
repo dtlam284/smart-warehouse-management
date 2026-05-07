@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
 import { useAppDispatch, useAppSelector } from '@/store'
-import { clearAuthError, registerThunk, selectAuthState } from '@/store/slices/authSlice'
+import { 
+  clearAuthError, 
+  registerThunk, 
+  selectAuthState 
+} from '@/store/slices/authSlice'
 
 //#region interfaces
 interface IRegisterFormValues {
@@ -83,12 +87,12 @@ export function RegisterScreen() {
           </div>
 
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-            Create Account
+            Sign Up
           </h1>
 
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          {/* <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             Register with your username, email, or phone number.
-          </p>
+          </p> */}
         </div>
         {/*#endregion header */}
 
