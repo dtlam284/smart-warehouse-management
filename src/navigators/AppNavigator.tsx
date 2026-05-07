@@ -6,6 +6,9 @@ import { ErrorBoundaryScreen } from "../screens/ErrorBoundaryScreen"
 // Static imports for critical auth paths (must load immediately)
 import { LoginScreen } from "../screens/Auth/LoginScreen"
 import { RegisterScreen } from "../screens/Auth/RegisterScreen"
+import { ActivationScreen } from "@/screens/Auth/ActivationScreen"
+import { ResetPasswordScreen } from "@/screens/Auth/ResetPasswordScreen"
+import { ForgotPasswordScreen } from "@/screens/Auth/ForgotPasswordScreen"
 import { SessionRequiredScreen } from "../screens/Auth/SessionRequiredScreen"
 import { NotFoundScreen } from "../screens/NotFound/NotFoundScreen"
 
@@ -59,6 +62,21 @@ export const router = createBrowserRouter([
   {
     path: "/auth/session-required",
     Component: SessionRequiredScreen,
+    ErrorBoundary: ErrorBoundaryScreen,
+  },
+  {
+    path: "/auth/activate",
+    Component: ActivationScreen,
+    ErrorBoundary: ErrorBoundaryScreen,
+  },
+  {
+    path: "/auth/reset-password",
+    Component: ResetPasswordScreen,
+    ErrorBoundary: ErrorBoundaryScreen,
+  },
+  {
+    path: "/auth/forgot-password",
+    Component: ForgotPasswordScreen,
     ErrorBoundary: ErrorBoundaryScreen,
   },
   {
