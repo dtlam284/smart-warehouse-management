@@ -3,9 +3,11 @@ import { authService } from '@/services/auth'
 import { tenantService } from '@/services/tenant'
 import { apiClient } from '@/services/core'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
+import { FunctionalPathEnum } from '@/models'
 import type { RootState } from '@/store/store'
 import type { AdminUser } from '@/models/account'
 import type {
+  AuthRole,
   IAgentItem,
   IAgentListRequest,
   IAgentListResponse,
@@ -30,9 +32,7 @@ import type {
   ITenantItem,
   ITenantListResponse,
 } from '@/models'
-import type { AuthRole } from '@/models/tenant'
 
-//#region types
 export type AuthStatus =
   | 'idle'
   | 'pending'
@@ -43,55 +43,40 @@ export type AuthStatus =
 
 export interface IAuthState {
   user: AdminUser | null
-
   tenants: ITenantItem[]
   selectedTenant: ITenantItem | null
-
   agents: IAgentItem[]
   selectedAgent: IAgentItem | null
-
   role: AuthRole | null
-
   status: AuthStatus
   pendingActivationUsername: string | null
-
   isAuthenticated: boolean
   isLoading: boolean
   isSubmitting: boolean
-
   error: string | null
   errorCode: string | null
 }
 
 export type AuthState = IAuthState
-//#endregion types
 
-//#region initial State
 const initialState: IAuthState = {
   user: null,
-
   tenants: [],
   selectedTenant: null,
-
   agents: [],
   selectedAgent: null,
-
   role: null,
-
   status: 'idle',
   pendingActivationUsername: null,
-
   isAuthenticated: false,
   isLoading: false,
   isSubmitting: false,
-
   error: null,
   errorCode: null,
 }
-//#endregion initial State
 
-//#region helpers
 const ACCOUNT_NOT_ACTIVATED_CODE = 'ACCOUNT_NOT_ACTIVATED'
+const AGENT_REQUIRED_FUNCTIONS = new Set<AuthRole>([FunctionalPathEnum.DISTRIBUTOR])
 
 const toErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === 'string' && error.trim().length > 0) {
@@ -136,6 +121,10 @@ const isActivationRequiredError = (message: string): boolean => {
   )
 }
 
+const requiresAgentSelection = (role: AuthRole): boolean => {
+  return AGENT_REQUIRED_FUNCTIONS.has(role)
+}
+
 const setSubmitPending = (state: IAuthState): void => {
   state.status = 'pending'
   state.isSubmitting = true
@@ -167,9 +156,7 @@ const setSettled = (state: IAuthState): void => {
 const clearStoredAuthTokens = (): void => {
   apiClient.clearTokens()
 }
-//#endregion helpers
 
-//#region auth thunks
 export const loginThunk = createAppAsyncThunk<IAuthLoginResponse, IAuthLoginRequest>(
   'auth/login',
   async (payload, { rejectWithValue }) => {
@@ -260,9 +247,7 @@ export const logoutThunk = createAppAsyncThunk<void, void>(
     }
   },
 )
-//#endregion auth thunks
 
-//#region tenant / role / agent thunks
 export const fetchTenantsThunk = createAppAsyncThunk<ITenantListResponse, void>(
   'auth/fetchTenants',
   async (_, { getState, rejectWithValue }) => {
@@ -293,7 +278,7 @@ export const selectRoleThunk = createAppAsyncThunk<
   try {
     return await tenantService.selectRole(payload)
   } catch (error) {
-    return rejectWithValue(toErrorMessage(error, 'Unable to select role'))
+    return rejectWithValue(toErrorMessage(error, 'Unable to select function'))
   }
 })
 
@@ -318,59 +303,38 @@ export const selectAgentThunk = createAppAsyncThunk<
     return rejectWithValue(toErrorMessage(error, 'Unable to select agent'))
   }
 })
-//#endregion tenant / role / agent thunks
 
-//#region Slice
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    //#region error reducers
     clearAuthError(state) {
       state.error = null
       state.errorCode = null
     },
-    //#endregion error reducers
-
-    //#region activation reducers
     setPendingActivationUsername(state, action: PayloadAction<string | null>) {
       state.pendingActivationUsername = action.payload
     },
-    //#endregion activation reducers
-
-    //#region compatibility reducers
     setAuthUser(state, action: PayloadAction<AdminUser | null>) {
       state.user = action.payload
       state.isAuthenticated = Boolean(action.payload)
-
-      if (action.payload) {
-        state.status = 'authenticated'
-      } else {
-        state.status = 'idle'
-      }
+      state.status = action.payload ? 'authenticated' : 'idle'
     },
-
     clearAuth() {
       clearStoredAuthTokens()
       return initialState
     },
-    //#endregion compatibility reducers
-
-    //#region reset reducers
     resetAuthState() {
       return initialState
     },
-    //#endregion reset reducers
   },
   extraReducers: (builder) => {
     builder
-      //#region login
       .addCase(loginThunk.pending, (state) => {
         setSubmitPending(state)
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.user = action.payload.user
         state.status = 'needs_tenant'
         state.isAuthenticated = false
@@ -396,15 +360,11 @@ const authSlice = createSlice({
         state.status = 'idle'
         state.isAuthenticated = false
       })
-      //#endregion login
-
-      //#region register
       .addCase(registerThunk.pending, (state) => {
         setSubmitPending(state)
       })
       .addCase(registerThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.status = 'idle'
         state.isAuthenticated = false
         state.pendingActivationUsername = action.meta.arg.username
@@ -413,9 +373,6 @@ const authSlice = createSlice({
         setRejected(state, action.payload ?? 'Unable to register')
         state.status = 'idle'
       })
-      //#endregion register
-
-      //#region activate
       .addCase(activateThunk.pending, (state) => {
         setSubmitPending(state)
       })
@@ -434,9 +391,6 @@ const authSlice = createSlice({
         setRejected(state, action.payload ?? 'Unable to activate account')
         state.status = 'idle'
       })
-      //#endregion activate
-
-      //#region resend OTP
       .addCase(resendOtpThunk.pending, (state) => {
         state.isSubmitting = true
         state.error = null
@@ -452,15 +406,11 @@ const authSlice = createSlice({
         state.error = action.payload ?? 'Unable to resend OTP'
         state.errorCode = null
       })
-      //#endregion resend OTP
-
-      //#region forgot password
       .addCase(forgotPasswordThunk.pending, (state) => {
         setSubmitPending(state)
       })
       .addCase(forgotPasswordThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.status = 'idle'
         state.pendingActivationUsername = action.meta.arg.username
       })
@@ -468,15 +418,11 @@ const authSlice = createSlice({
         setRejected(state, action.payload ?? 'Unable to send reset password request')
         state.status = 'idle'
       })
-      //#endregion forgot password
-
-      //#region reset password
       .addCase(resetPasswordThunk.pending, (state) => {
         setSubmitPending(state)
       })
       .addCase(resetPasswordThunk.fulfilled, (state) => {
         setSettled(state)
-
         state.status = 'idle'
         state.pendingActivationUsername = null
       })
@@ -484,15 +430,11 @@ const authSlice = createSlice({
         setRejected(state, action.payload ?? 'Unable to reset password')
         state.status = 'idle'
       })
-      //#endregion reset password
-
-      //#region profile
       .addCase(fetchMyProfileThunk.pending, (state) => {
         setActionPending(state)
       })
       .addCase(fetchMyProfileThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.user = action.payload
 
         if (state.status === 'idle' || state.status === 'pending') {
@@ -502,34 +444,25 @@ const authSlice = createSlice({
       })
       .addCase(fetchMyProfileThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to fetch profile')
-
         state.user = null
         state.isAuthenticated = false
         state.status = 'idle'
       })
-      //#endregion profile
-
-      //#region fetch tenants
       .addCase(fetchTenantsThunk.pending, (state) => {
         setActionPending(state)
       })
       .addCase(fetchTenantsThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.tenants = action.payload.items
       })
       .addCase(fetchTenantsThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to fetch tenants')
       })
-      //#endregion fetch tenants
-
-      //#region select tenant
       .addCase(selectTenantThunk.pending, (state) => {
         setActionPending(state)
       })
       .addCase(selectTenantThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.selectedTenant = action.payload.tenant
         state.selectedAgent = null
         state.agents = []
@@ -540,9 +473,6 @@ const authSlice = createSlice({
       .addCase(selectTenantThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to select tenant')
       })
-      //#endregion select tenant
-
-      //#region select role
       .addCase(selectRoleThunk.pending, (state) => {
         setActionPending(state)
       })
@@ -554,7 +484,7 @@ const authSlice = createSlice({
         state.role = selectedRole
         state.selectedAgent = null
 
-        if (selectedRole === 'agent') {
+        if (requiresAgentSelection(selectedRole)) {
           state.status = 'needs_agent'
           state.isAuthenticated = false
           return
@@ -564,31 +494,23 @@ const authSlice = createSlice({
         state.isAuthenticated = true
       })
       .addCase(selectRoleThunk.rejected, (state, action) => {
-        setRejected(state, action.payload ?? 'Unable to select role')
+        setRejected(state, action.payload ?? 'Unable to select function')
       })
-      //#endregion select role
-
-      //#region fetch agents
       .addCase(fetchAgentsThunk.pending, (state) => {
         setActionPending(state)
       })
       .addCase(fetchAgentsThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.agents = action.payload.items
       })
       .addCase(fetchAgentsThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to fetch agents')
       })
-      //#endregion fetch agents
-
-      //#region select agent
       .addCase(selectAgentThunk.pending, (state) => {
         setActionPending(state)
       })
       .addCase(selectAgentThunk.fulfilled, (state, action) => {
         setSettled(state)
-
         state.selectedAgent = action.payload.agent
         state.status = 'authenticated'
         state.isAuthenticated = true
@@ -596,9 +518,6 @@ const authSlice = createSlice({
       .addCase(selectAgentThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to select agent')
       })
-      //#endregion select agent
-
-      //#region logout
       .addCase(logoutThunk.pending, (state) => {
         state.isLoading = true
         state.isSubmitting = true
@@ -611,12 +530,9 @@ const authSlice = createSlice({
       .addCase(logoutThunk.rejected, () => {
         return initialState
       })
-    //#endregion logout
   },
 })
-//#endregion slice
 
-//#region actions
 export const {
   clearAuthError,
   setPendingActivationUsername,
@@ -624,52 +540,27 @@ export const {
   setAuthUser,
   clearAuth,
 } = authSlice.actions
-//#endregion actions
 
-//#region thunk
 export const loginAdmin = loginThunk
 export const logoutAdmin = logoutThunk
 export const fetchMyProfile = fetchMyProfileThunk
-//#endregion thunk
 
-//#region selectors
 export const selectAuthState = (state: RootState) => state.auth
-
 export const selectAuthUser = (state: RootState) => state.auth.user
-
 export const selectAuthStatus = (state: RootState) => state.auth.status
-
 export const selectAuthError = (state: RootState) => state.auth.error
-
 export const selectAuthErrorCode = (state: RootState) => state.auth.errorCode
-
 export const selectAuthIsLoading = (state: RootState) => state.auth.isLoading
-
 export const selectAuthIsSubmitting = (state: RootState) => state.auth.isSubmitting
-
-export const selectIsAuthenticated = (state: RootState) =>
-  state.auth.status === 'authenticated' || state.auth.isAuthenticated
-
+export const selectIsAuthenticated = (state: RootState) => state.auth.status === 'authenticated' || state.auth.isAuthenticated
 export const selectTenants = (state: RootState) => state.auth.tenants
-
 export const selectSelectedTenant = (state: RootState) => state.auth.selectedTenant
-
 export const selectAgents = (state: RootState) => state.auth.agents
-
 export const selectSelectedAgent = (state: RootState) => state.auth.selectedAgent
-
 export const selectAuthRole = (state: RootState) => state.auth.role
-
-export const selectPendingActivationUsername = (state: RootState) =>
-  state.auth.pendingActivationUsername
-
+export const selectPendingActivationUsername = (state: RootState) => state.auth.pendingActivationUsername
 export const selectNeedsTenant = (state: RootState) => state.auth.status === 'needs_tenant'
-
 export const selectNeedsRole = (state: RootState) => state.auth.status === 'needs_role'
-
 export const selectNeedsAgent = (state: RootState) => state.auth.status === 'needs_agent'
-//#endregion selectors
 
-//#region reducer
 export default authSlice.reducer
-//#endregion reducer
