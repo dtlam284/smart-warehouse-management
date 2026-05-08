@@ -58,6 +58,8 @@ export function ForgotPasswordScreen() {
     const result = await dispatch(
       forgotPasswordThunk({
         username,
+        typeVerification: 'Email',
+        continueUrl: `${window.location.origin}/auth/reset-password`,
       }),
     )
 

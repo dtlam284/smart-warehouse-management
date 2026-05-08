@@ -13,7 +13,7 @@ export const API_ENDPOINTS = {
     login: 'api/v3/account/login', // TODO: replace with real endpoint
     loginEmail: 'api/v3/account/login', // TODO: replace with real endpoint
     register: 'api/account/register-cms', // TODO: replace with real endpoint
-    activate: 'api/account/comfirm-account', // TODO: replace with real endpoint
+    activate: 'api/account/confirm-account', // TODO: replace with real endpoint
     resendOtp: 'api/account/resend-confirm-account', // TODO: replace with real endpoint
     forgotPassword: 'api/account/forgot-password', // TODO: replace with real endpoint
     resetPassword: 'api/account/reset-password', // TODO: replace with real endpoint

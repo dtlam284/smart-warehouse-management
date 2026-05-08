@@ -1,47 +1,53 @@
 export interface IAuthLoginRequest {
-  username: string
-  password: string
+    username: string
+    password: string
+    host?: string
+    code?: string
+    functionPath?: string
 }
 
 export interface IAuthRegisterRequest {
-  username: string
-  fullName: string
-  password: string
-  confirmPassword: string
+    username: string
+    fullName: string
+    password: string
+    confirmPassword: string
 }
 
 export interface IAuthActivateRequest {
-  username: string
-  otp: string
+    username: string
+    code: string
 }
 
 export interface IAuthResendOtpRequest {
-  username: string
+    username: string
 }
 
 export interface IAuthForgotPasswordRequest {
-  username: string
+    username: string
+    typeVerification?: string
+    continueUrl?: string
 }
 
 export interface IAuthResetPasswordRequest {
-  username: string
-  otp: string
-  newPassword: string
-  confirmPassword: string
+    username: string
+    code: string
+    password: string
+    confirmPassword: string
+    continueUrl?: string
 }
 
 export interface IAuthRefreshRequest {
-  refreshToken: string
+    refreshToken: string
 }
 
 export interface IAuthLogoutRequest {
-  refreshToken?: string
+    refreshToken?: string
 }
 
 export interface IUpdateMyProfileRequest {
-  firstName?: string
-  lastName?: string
-  photo?: string
+    firstName?: string
+    lastName?: string
+    photo?: string
 }
 
 export type AuthLoginRequest = IAuthLoginRequest

@@ -153,7 +153,7 @@ export function ActivationScreen() {
         const result = await dispatch(
             activateThunk({
                 username,
-                otp: values.otp,
+                code: values.otp,
             }),
         )
 
@@ -246,7 +246,7 @@ export function ActivationScreen() {
                         {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
                     </Button>
                 </form>
-                {/*#endregion otp form */}
+                {/*#region otp form */}
 
                 <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
                     Already activated?{' '}

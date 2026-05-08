@@ -117,8 +117,8 @@ export function ResetPasswordScreen() {
     const result = await dispatch(
       resetPasswordThunk({
         username,
-        otp: values.otp,
-        newPassword: values.newPassword,
+        code: values.otp,
+        password: values.newPassword,
         confirmPassword: values.confirmPassword,
       }),
     )
