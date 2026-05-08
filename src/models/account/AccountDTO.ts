@@ -1,6 +1,6 @@
-import type { PaginatedQuery, PaginationQuery } from '@/models/common'
+import type { IPaginatedQuery, IPaginationQuery } from '@/models/common'
 
-export interface UserFilters extends PaginatedQuery {
+export interface IUserFilters extends IPaginatedQuery {
   role?: string | number
   status?: string | number
   roles?: Array<{ id: number }>
@@ -16,7 +16,7 @@ export interface UserFilters extends PaginatedQuery {
   }>
 }
 
-export interface CreateUserRequest {
+export interface ICreateUserRequest {
   email: string
   password: string
   firstName: string
@@ -25,7 +25,7 @@ export interface CreateUserRequest {
   status?: { id: number }
 }
 
-export interface UpdateUserRequest {
+export interface IUpdateUserRequest {
   email?: string
   password?: string
   firstName?: string
@@ -35,12 +35,12 @@ export interface UpdateUserRequest {
   photo?: string
 }
 
-export interface CreatePermissionRequest {
+export interface ICreatePermissionRequest {
   action: string
   description: string
 }
 
-export interface LoginAuditFilters extends PaginationQuery {
+export interface ILoginAuditFilters extends IPaginationQuery {
   email?: string
   userId?: string
   provider?: string

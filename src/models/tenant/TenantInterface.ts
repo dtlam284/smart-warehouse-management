@@ -1,4 +1,4 @@
-import type { ISODateString } from "../common";
+import type { ISODateString } from '../common';
 
 export enum FunctionalPathEnum {
   MANAGER = 'manager',

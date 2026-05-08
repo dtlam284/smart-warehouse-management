@@ -1,3 +1,6 @@
+import { AGENT_REQUIRED_FUNCTIONS } from "@/store/slices/authSlice"
+import type { AuthRole } from "@/models"
+
 export const isActivationRequiredMessage = (message?: string): boolean => {
   if (!message) {
     return false
@@ -42,4 +45,8 @@ export const maskAuthTarget = (username: string): string => {
 
 export const sanitizeOtp = (value: string): string => {
     return value.replace(/\D/g, '').slice(0, 6)
+}
+
+export const requiresAgentSelection = (role: AuthRole): boolean => {
+    return AGENT_REQUIRED_FUNCTIONS.has(role)
 }

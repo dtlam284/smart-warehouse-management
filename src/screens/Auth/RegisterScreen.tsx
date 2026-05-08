@@ -104,9 +104,9 @@ export function RegisterScreen() {
         ) : null}
         {/*#endregion redux error */}
 
-        {/*#region Register Form */}
+        {/*#region register form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/*#region Username Field */}
+          {/*#region username field */}
           <div className="space-y-1.5">
             <label
               htmlFor="username"
@@ -134,9 +134,9 @@ export function RegisterScreen() {
               </p>
             ) : null}
           </div>
-          {/*#endregion Username Field */}
+          {/*#endregion username field */}
 
-          {/*#region Full Name Field */}
+          {/*#region full name field */}
           <div className="space-y-1.5">
             <label
               htmlFor="fullName"
@@ -164,9 +164,9 @@ export function RegisterScreen() {
               </p>
             ) : null}
           </div>
-          {/*#endregion Full Name Field */}
+          {/*#endregion full name field */}
 
-          {/*#region Password Field */}
+          {/*#region password field */}
           <div className="space-y-1.5">
             <label
               htmlFor="password"
@@ -194,9 +194,9 @@ export function RegisterScreen() {
               </p>
             ) : null}
           </div>
-          {/*#endregion Password Field */}
+          {/*#endregion password field */}
 
-          {/*#region Confirm Password Field */}
+          {/*#region confirm password field */}
           <div className="space-y-1.5">
             <label
               htmlFor="confirmPassword"
@@ -225,17 +225,17 @@ export function RegisterScreen() {
               </p>
             ) : null}
           </div>
-          {/*#endregion Confirm Password Field */}
+          {/*#endregion confirm password field */}
 
-          {/*#region Submit Button */}
+          {/*#region submit button */}
           <Button type="submit" disabled={isBusy} className="w-full">
             {isBusy ? 'Creating account...' : 'Create account'}
           </Button>
-          {/*#endregion Submit Button */}
+          {/*#endregion submit button */}
         </form>
-        {/*#endregion Register Form */}
+        {/*#endregion register form */}
 
-        {/*#region Footer */}
+        {/*#region footer */}
         <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
           Already have an account?{' '}
           <Link
@@ -245,7 +245,7 @@ export function RegisterScreen() {
             Sign in
           </Link>
         </p>
-        {/*#endregion Footer */}
+        {/*#endregion footer */}
       </div>
     </div>
   )

@@ -11,11 +11,11 @@ import {
   selectAuthState,
 } from '@/store/slices/authSlice'
 
-//#region types
+//#region interfaces
 interface IForgotPasswordFormValues {
   username: string
 }
-//#endregion types
+//#endregion interfaces
 
 //#region forgot password screen
 export function ForgotPasswordScreen() {
@@ -157,4 +157,4 @@ export function ForgotPasswordScreen() {
   )
   //#endregion render
 }
-//#endregion forgot password screen"
+//#endregion forgot password screen

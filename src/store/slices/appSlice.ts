@@ -1,12 +1,12 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-export interface AppState {
+export interface IAppState {
   initialized: boolean
   pageTitle: string
   isSidebarCollapsed: boolean
 }
 
-const initialState: AppState = {
+const initialState: IAppState = {
   initialized: false,
   pageTitle: '',
   isSidebarCollapsed: false,

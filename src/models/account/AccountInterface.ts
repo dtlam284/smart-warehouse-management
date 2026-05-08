@@ -1,24 +1,24 @@
-import type { ID, ISODateString, RoleRef, StatusRef } from '@/models/common'
+import type { ID, ISODateString, IRoleRef, IStatusRef } from '@/models/common'
 
-export interface AdminUser {
+export interface IAdminUser {
   id: ID
   email: string
   firstName: string
   lastName: string
-  role: RoleRef
-  status: StatusRef
+  role: IRoleRef
+  status: IStatusRef
   photo?: string
   createdAt?: ISODateString
   updatedAt?: ISODateString
 }
 
-export interface PermissionItem {
+export interface IPermissionItem {
   id: number | string
   action: string
   description: string
 }
 
-export interface LoginAuditItem {
+export interface ILoginAuditItem {
   id: string
   userId?: string
   email?: string
@@ -33,7 +33,7 @@ export interface LoginAuditItem {
   createdAt: ISODateString
 }
 
-export interface LoginAuditStats {
+export interface ILoginAuditStats {
   totalAttempts: number
   successCount: number
   failedCount: number

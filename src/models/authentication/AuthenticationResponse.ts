@@ -1,10 +1,10 @@
-import type { AdminUser } from '@/models/account'
+import type { IAdminUser } from '@/models/account'
 
 export interface IAuthLoginResponse {
   token: string
   refreshToken: string
   tokenExpires: number
-  user: AdminUser
+  user: IAdminUser
   message?: string
 }
 
@@ -13,7 +13,7 @@ export interface IAuthRegisterResponse {
 }
 
 export interface IAuthActivateResponse {
-  user?: AdminUser
+  user?: IAdminUser
   message: string
 }
 
@@ -30,7 +30,7 @@ export interface IAuthResetPasswordResponse {
 }
 
 export interface IAuthMeResponse {
-  user: AdminUser
+  user: IAdminUser
 }
 
 export interface IAuthRefreshResponse {

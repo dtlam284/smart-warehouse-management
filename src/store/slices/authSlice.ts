@@ -4,8 +4,8 @@ import { tenantService } from '@/services/tenant'
 import { apiClient } from '@/services/core'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
 import { FunctionalPathEnum } from '@/models'
+import { IAdminUser } from '@/models/account'
 import type { RootState } from '@/store/store'
-import type { AdminUser } from '@/models/account'
 import type {
   AuthRole,
   IAgentItem,
@@ -42,7 +42,7 @@ export type AuthStatus =
   | 'authenticated'
 
 export interface IAuthState {
-  user: AdminUser | null
+  user: IAdminUser | null
   tenants: ITenantItem[]
   selectedTenant: ITenantItem | null
   agents: IAgentItem[]
@@ -75,8 +75,8 @@ const initialState: IAuthState = {
   errorCode: null,
 }
 
-const ACCOUNT_NOT_ACTIVATED_CODE = 'ACCOUNT_NOT_ACTIVATED'
-const AGENT_REQUIRED_FUNCTIONS = new Set<AuthRole>([FunctionalPathEnum.DISTRIBUTOR])
+export const ACCOUNT_NOT_ACTIVATED_CODE = 'ACCOUNT_NOT_ACTIVATED'
+export const AGENT_REQUIRED_FUNCTIONS = new Set<AuthRole>([FunctionalPathEnum.DISTRIBUTOR])
 
 const toErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === 'string' && error.trim().length > 0) {
@@ -223,7 +223,7 @@ export const resetPasswordThunk = createAppAsyncThunk<
   }
 })
 
-export const fetchMyProfileThunk = createAppAsyncThunk<AdminUser, void>(
+export const fetchMyProfileThunk = createAppAsyncThunk<IAdminUser, void>(
   'auth/fetchMyProfile',
   async (_, { rejectWithValue }) => {
     try {
@@ -315,7 +315,7 @@ const authSlice = createSlice({
     setPendingActivationUsername(state, action: PayloadAction<string | null>) {
       state.pendingActivationUsername = action.payload
     },
-    setAuthUser(state, action: PayloadAction<AdminUser | null>) {
+    setAuthUser(state, action: PayloadAction<IAdminUser | null>) {
       state.user = action.payload
       state.isAuthenticated = Boolean(action.payload)
       state.status = action.payload ? 'authenticated' : 'idle'

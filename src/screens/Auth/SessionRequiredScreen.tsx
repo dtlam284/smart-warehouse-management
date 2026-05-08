@@ -1,21 +1,21 @@
-import React from "react";
-import { ShieldAlert } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import React from 'react'
+import { ShieldAlert } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 
 //#region session required screen
 export function SessionRequiredScreen() {
   //#region hooks
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { refreshProfile } = useAuth();
-  const [isChecking, setIsChecking] = React.useState(false);
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { refreshProfile } = useAuth()
+  const [isChecking, setIsChecking] = React.useState(false)
   //#endregion hooks
 
   //#region derived state
-  const redirect = searchParams.get("redirect") || "/";
-  const reason = searchParams.get("reason");
+  const redirect = searchParams.get('redirect') || '/'
+  const reason = searchParams.get('reason');
   //#endregion derived state
 
   //#region handlers

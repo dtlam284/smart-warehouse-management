@@ -3,16 +3,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { authService } from '@/services/admin'
 import { env } from '@/config/env'
 import { ApiError, queryKeys } from '@/services/core'
-import type { AdminUser } from '@/models/account'
+import { IAdminUser } from '@/models/account'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
 interface AuthContextValue {
-  user: AdminUser | null
+  user: IAdminUser | null
   status: AuthStatus
   isAuthenticated: boolean
   error: unknown
-  refreshProfile: () => Promise<AdminUser | null>
+  refreshProfile: () => Promise<IAdminUser | null>
   logout: () => Promise<void>
 }
 
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [meQuery.error, queryClient])
 
-  const refreshProfile = React.useCallback(async (): Promise<AdminUser | null> => {
+  const refreshProfile = React.useCallback(async (): Promise<IAdminUser | null> => {
     const nextHasSession = hasStoredSession()
     setHasSession(nextHasSession)
 

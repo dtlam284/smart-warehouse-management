@@ -1,17 +1,21 @@
 import { API_ENDPOINTS } from '@/constants/api'
 import { apiClient } from '@/services/core'
-import type { EntityId, IDataResponse, IPaginatedResponse } from '@/services/core'
-import type {
-  AdminUser,
-  CreatePermissionRequest,
-  CreateUserRequest,
-  LoginAuditFilters,
-  LoginAuditItem,
-  LoginAuditStats,
-  PermissionItem,
-  UpdateUserRequest,
-  UserFilters,
+import {
+  IAdminUser,
+  ICreatePermissionRequest,
+  ICreateUserRequest,
+  ILoginAuditFilters,
+  ILoginAuditItem,
+  ILoginAuditStats,
+  IPermissionItem,
+  IUpdateUserRequest,
+  IUserFilters,
 } from '@/models/account'
+import { 
+  EntityId, 
+  IDataResponse, 
+  IPaginatedResponse 
+} from '@/services/core'
 import type {
   AuthLoginRequest,
   AuthLoginResponse,
@@ -103,12 +107,12 @@ export const authService = {
   //#endregion token storage helpers
 
   //#region profile
-  getMe(): Promise<AdminUser> {
-    return apiClient.get<AdminUser>(API_ENDPOINTS.auth.me)
+  getMe(): Promise<IAdminUser> {
+    return apiClient.get<IAdminUser>(API_ENDPOINTS.auth.me)
   },
 
-  updateMe(payload: UpdateMyProfileRequest): Promise<AdminUser> {
-    return apiClient.patch<AdminUser>(API_ENDPOINTS.auth.me, payload)
+  updateMe(payload: UpdateMyProfileRequest): Promise<IAdminUser> {
+    return apiClient.patch<IAdminUser>(API_ENDPOINTS.auth.me, payload)
   },
   //#endregion profile
 
@@ -127,7 +131,7 @@ export const authService = {
 //#region users service
 export const usersService = {
   //#region list users
-  list(query?: UserFilters): Promise<IPaginatedResponse<AdminUser>> {
+  list(query?: IUserFilters): Promise<IPaginatedResponse<IAdminUser>> {
     const normalizedRoleId =
       query?.role !== undefined && query.role !== null && query.role !== ''
         ? Number(query.role)
@@ -170,21 +174,21 @@ export const usersService = {
           : undefined,
     }
 
-    return apiClient.get<IPaginatedResponse<AdminUser>>(API_ENDPOINTS.users.root, {
+    return apiClient.get<IPaginatedResponse<IAdminUser>>(API_ENDPOINTS.users.root, {
       query: { ...normalizedQuery },
     })
   },
 
   async listAll(
-    query?: Omit<UserFilters, 'page' | 'limit'> & {
+    query?: Omit<IUserFilters, 'page' | 'limit'> & {
       pageSize?: number
       maxPages?: number
     },
-  ): Promise<AdminUser[]> {
+  ): Promise<IAdminUser[]> {
     const pageSize = Math.min(50, Math.max(1, Number(query?.pageSize ?? 50)))
     const maxPages = Math.max(1, Number(query?.maxPages ?? 200))
 
-    const users: AdminUser[] = []
+    const users: IAdminUser[] = []
     let page = 1
     let totalPages = 1
 
@@ -211,16 +215,16 @@ export const usersService = {
   //#endregion list users
 
   //#region user CRUD
-  create(payload: CreateUserRequest): Promise<IDataResponse<AdminUser>> {
-    return apiClient.post<IDataResponse<AdminUser>>(API_ENDPOINTS.users.root, payload)
+  create(payload: ICreateUserRequest): Promise<IDataResponse<IAdminUser>> {
+    return apiClient.post<IDataResponse<IAdminUser>>(API_ENDPOINTS.users.root, payload)
   },
 
-  getById(id: EntityId): Promise<IDataResponse<AdminUser>> {
-    return apiClient.get<IDataResponse<AdminUser>>(API_ENDPOINTS.users.byId(id))
+  getById(id: EntityId): Promise<IDataResponse<IAdminUser>> {
+    return apiClient.get<IDataResponse<IAdminUser>>(API_ENDPOINTS.users.byId(id))
   },
 
-  update(id: EntityId, payload: UpdateUserRequest): Promise<IDataResponse<AdminUser>> {
-    return apiClient.patch<IDataResponse<AdminUser>>(API_ENDPOINTS.users.byId(id), payload)
+  update(id: EntityId, payload: IUpdateUserRequest): Promise<IDataResponse<IAdminUser>> {
+    return apiClient.patch<IDataResponse<IAdminUser>>(API_ENDPOINTS.users.byId(id), payload)
   },
 
   remove(id: EntityId): Promise<void> {
@@ -233,12 +237,12 @@ export const usersService = {
 //#region permissions service
 export const permissionsService = {
   //#region permission CRUD
-  list(): Promise<IDataResponse<PermissionItem[]>> {
-    return apiClient.get<IDataResponse<PermissionItem[]>>(API_ENDPOINTS.permissions.root)
+  list(): Promise<IDataResponse<IPermissionItem[]>> {
+    return apiClient.get<IDataResponse<IPermissionItem[]>>(API_ENDPOINTS.permissions.root)
   },
 
-  create(payload: CreatePermissionRequest): Promise<IDataResponse<PermissionItem>> {
-    return apiClient.post<IDataResponse<PermissionItem>>(
+  create(payload: ICreatePermissionRequest): Promise<IDataResponse<IPermissionItem>> {
+    return apiClient.post<IDataResponse<IPermissionItem>>(
       API_ENDPOINTS.permissions.root,
       payload,
     )
@@ -254,8 +258,8 @@ export const permissionsService = {
 //#region login audit service
 export const loginAuditService = {
   //#region login audit queries
-  list(query?: LoginAuditFilters): Promise<IPaginatedResponse<LoginAuditItem>> {
-    return apiClient.get<IPaginatedResponse<LoginAuditItem>>(
+  list(query?: ILoginAuditFilters): Promise<IPaginatedResponse<ILoginAuditItem>> {
+    return apiClient.get<IPaginatedResponse<ILoginAuditItem>>(
       API_ENDPOINTS.loginAudit.root,
       {
         query: query ? { ...query } : undefined,
@@ -263,8 +267,8 @@ export const loginAuditService = {
     )
   },
 
-  getStats(query?: LoginAuditFilters): Promise<IDataResponse<LoginAuditStats>> {
-    return apiClient.get<IDataResponse<LoginAuditStats>>(
+  getStats(query?: ILoginAuditFilters): Promise<IDataResponse<ILoginAuditStats>> {
+    return apiClient.get<IDataResponse<ILoginAuditStats>>(
       API_ENDPOINTS.loginAudit.stats,
       {
         query: query ? { ...query } : undefined,

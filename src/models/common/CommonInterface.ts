@@ -1,28 +1,28 @@
 export type ISODateString = string
 export type ID = string
 
-export interface RoleRef {
+export interface IRoleRef {
   id: number
   name: string
 }
 
-export interface StatusRef {
+export interface IStatusRef {
   id: number
   name: string
 }
 
-export interface PaginationQuery {
+export interface IPaginationQuery {
   page?: number
   limit?: number
 }
 
-export interface DateRangeQuery {
+export interface IDateRangeQuery {
   from?: string
   to?: string
   startDate?: string
   endDate?: string
 }
 
-export interface PaginatedQuery extends PaginationQuery {
+export interface IPaginatedQuery extends IPaginationQuery {
   search?: string
 }
