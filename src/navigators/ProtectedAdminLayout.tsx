@@ -1,66 +1,67 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, useLocation } from "react-router";
-import { AdminLayout } from "./AdminLayout";
+import { Navigate, useLocation } from 'react-router'
+import { AdminLayout } from './AdminLayout'
+import { useAppSelector } from '@/store'
+import { selectAuthState } from '@/store/slices/authSlice'
+import { appendRedirectParam, createLoginPathWithRedirect } from './redirect'
 
 function AuthCheckingScreen() {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white border border-slate-200 rounded-xl p-6 shadow-sm text-center space-y-3">
-        <div className="mx-auto h-9 w-9 rounded-full border-2 border-slate-300 border-t-blue-600 animate-spin" />
-        <h1 className="text-base font-semibold text-slate-900">
-          Validating session
-        </h1>
-        <p className="text-sm text-slate-500">Checking your account access.</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
+        <div className="w-full max-w-sm space-y-3 rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                <h1 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+                    Validating session
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Checking your account access.
+                </p>
+        </div>
     </div>
-  );
+  )
 }
 
 export function ProtectedAdminLayout() {
-  const { status, user } = useAuth();
-  const location = useLocation();
+    const auth = useAppSelector(selectAuthState)
+    const location = useLocation()
 
-  if (status === "loading") {
-    return <AuthCheckingScreen />;
-  }
+    if (auth.status === 'pending' || auth.isLoading) {
+        return <AuthCheckingScreen />
+    }
 
-  if (status === "unauthenticated") {
-    const redirect = `${location.pathname}${location.search}`;
-    return (
-      <Navigate
-        to={`/auth/login?redirect=${encodeURIComponent(redirect)}`}
-        replace
-      />
-    );
-  }
-  const userRecord = (user ?? {}) as Record<string, unknown>;
-  const roleRecord =
-    userRecord.role && typeof userRecord.role === "object"
-      ? (userRecord.role as Record<string, unknown>)
-      : undefined;
-  const roleId = Number(
-    roleRecord?.id ??
-      userRecord.roleId ??
-      userRecord.role_id ??
-      userRecord.role,
-  );
-  const roleNameCandidates = [
-    roleRecord?.name,
-    userRecord.roleName,
-    userRecord.role_name,
-    typeof userRecord.role === "string" ? userRecord.role : undefined,
-  ];
-  const normalizedRoleNames = roleNameCandidates
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim().toLowerCase().replace(/[\s-]+/g, "_"))
-    .filter(Boolean);
-  const isAdminByName = normalizedRoleNames.some((name) =>
-    ["admin", "administrator", "super_admin", "superadmin"].includes(name),
-  );
-  const isAdmin = roleId === 1 || isAdminByName;
-  if (!isAdmin) {
-    return <Navigate to="/auth/session-required?reason=forbidden" replace />;
-  }
+    if (auth.status === 'idle') {
+        return <Navigate to={createLoginPathWithRedirect(location)} replace />
+    }
 
-  return <AdminLayout />;
+    if (auth.status === 'needs_tenant') {
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/select-tenant', location.search)}
+                replace
+            />
+        )
+    }
+
+    if (auth.status === 'needs_role') {
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/select-role', location.search)}
+                replace
+            />
+        )
+    }
+
+    if (auth.status === 'needs_agent') {
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/select-agent', location.search)}
+                replace
+            />
+        )
+    }
+
+    if (auth.status === 'authenticated') {
+        return <AdminLayout />
+    }
+
+    return <Navigate to='/auth/login' replace />
 }

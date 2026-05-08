@@ -1,6 +1,6 @@
 import React from 'react'
 import { Building2, RefreshCw, UsersRound } from 'lucide-react'
-import { Navigate, useNavigate } from 'react-router'
+import { Navigate, useNavigate, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -9,13 +9,17 @@ import {
     selectAuthState,
     selectAgentThunk,
 } from '@/store/slices/authSlice'
+import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
 import type { IAgentItem } from '@/models/tenant/TenantInterface'
+
+
 
 //#region agent selection screen
 export function AgentSelectionScreen() {
     //#region hooks
     const dispatch = useAppDispatch()
     const navigate = useNavigate()
+    const location = useLocation()
     const auth = useAppSelector(selectAuthState)
     const hasRequestedAgentsRef = React.useRef(false)
     //#endregion hooks
@@ -38,7 +42,7 @@ export function AgentSelectionScreen() {
         }
 
         if (hasRequestedAgentsRef.current) {
-        return
+            return
         }
 
         hasRequestedAgentsRef.current = true
@@ -53,23 +57,43 @@ export function AgentSelectionScreen() {
 
     //#region auth redirect
     if (auth.status === 'idle') {
-        return <Navigate to="/auth/login" replace />
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/login', location.search)}
+                replace
+            />
+        )
     }
 
     if (auth.status === 'authenticated') {
-        return <Navigate to="/" replace />
+        return <Navigate to={getRedirectParam(location.search)} replace />
     }
 
     if (!selectedTenant) {
-        return <Navigate to="/auth/select-tenant" replace />
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/select-tenant', location.search)}
+                replace
+            />
+        )
     }
 
     if (auth.status === 'needs_tenant') {
-        return <Navigate to="/auth/select-tenant" replace />
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/select-tenant', location.search)}
+                replace
+            />
+        )
     }
 
     if (auth.status === 'needs_role') {
-        return <Navigate to="/auth/select-role" replace />
+        return (
+            <Navigate
+                to={appendRedirectParam('/auth/select-role', location.search)}
+                replace
+            />
+        )
     }
     //#endregion auth redirect
 
@@ -83,10 +107,11 @@ export function AgentSelectionScreen() {
     const handleRetry = () => {
         clearErrorIfNeeded()
         hasRequestedAgentsRef.current = true
+
         void dispatch(
             fetchAgentsThunk({
-            page: 1,
-            limit: 50,
+                page: 1,
+                limit: 50,
             }),
         )
     }
@@ -94,8 +119,7 @@ export function AgentSelectionScreen() {
     const handleSelectAgent = async (agent: IAgentItem) => {
         const isAgentDisabled = agent.isAvailable === false || agent.isActive === false
 
-
-        if (agent.isActive === false || isBusy) {
+        if (isAgentDisabled || isBusy) {
             return
         }
 
@@ -108,15 +132,18 @@ export function AgentSelectionScreen() {
         )
 
         if (selectAgentThunk.fulfilled.match(result)) {
-            navigate('/auth/select-role', { replace: true })
+            navigate(getRedirectParam(location.search), { replace: true })
         }
     }
     //#endregion handlers
+
+    navigate(getRedirectParam(location.search), { replace: true })
 
     //#region render
     return (
         <div className="min-h-screen bg-slate-50 px-4 py-10 dark:bg-slate-950">
             <div className="mx-auto w-full max-w-4xl">
+                {/*#region header */}
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                         <UsersRound className="h-6 w-6" />
@@ -139,7 +166,9 @@ export function AgentSelectionScreen() {
                         {selectedTenant.name}
                     </div>
                 </div>
+                {/*#endregion header */}
 
+                {/*#region redux error */}
                 {auth.error ? (
                     <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -158,6 +187,7 @@ export function AgentSelectionScreen() {
                         </div>
                     </div>
                 ) : null}
+                {/*#endregion redux error */}
 
                 {isInitialLoading ? (
                     <AgentSkeletonList />
