@@ -1,7 +1,7 @@
-import { AGENT_REQUIRED_FUNCTIONS } from "@/store/slices/authSlice"
-import type { AuthRole } from "@/models"
+import { AGENT_REQUIRED_FUNCTIONS } from '@/store/slices/authSlice'
+import type { AuthRole } from '@/models'
 
-export const isActivationRequiredMessage = (message?: string): boolean => {
+export const isActivationRequiredMessage = (message?: string | undefined): boolean => {
   if (!message) {
     return false
   }
@@ -11,6 +11,8 @@ export const isActivationRequiredMessage = (message?: string): boolean => {
   return (
     normalizedMessage.includes('not activated') ||
     normalizedMessage.includes('not confirmed') ||
+    normalizedMessage.includes('not been confirmed') ||
+    normalizedMessage.includes('has not been confirmed') ||
     normalizedMessage.includes('not verified') ||
     normalizedMessage.includes('account is inactive') ||
     normalizedMessage.includes('chưa kích hoạt') ||

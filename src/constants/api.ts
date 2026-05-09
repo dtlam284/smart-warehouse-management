@@ -35,7 +35,7 @@ export const API_ENDPOINTS = {
 
   //#region role endpoints
   role: {
-    select: 'api/account/select-function', // TODO: replace with real endpoint
+    select: 'api/account/select-funtion', // TODO: replace with real endpoint
   },
   //#endregion role endpoints
 

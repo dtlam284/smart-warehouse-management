@@ -1,14 +1,20 @@
+import { useEffect } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { 
+    Link, 
+    Navigate, 
+    useLocation, 
+    useNavigate 
+} from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
 import { useAppDispatch, useAppSelector } from '@/store'
-import {
-    clearAuthError,
-    loginThunk,
-    selectAuthState,
+import { 
+    clearAuthError, 
+    loginThunk, 
+    selectAuthState 
 } from '@/store/slices/authSlice'
 import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
 import { isActivationRequiredMessage } from './utils'
@@ -27,6 +33,10 @@ export function LoginScreen() {
     const navigate = useNavigate()
     const location = useLocation()
     const auth = useAppSelector(selectAuthState)
+
+    useEffect(() => {
+        dispatch(clearAuthError())
+    }, [dispatch])
 
     const {
         register,
@@ -102,10 +112,26 @@ export function LoginScreen() {
 
                 {/*#region redux error */}
                 {auth.error ? (
-                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                        {auth.error}
-                    </div>
-                ) : null}
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                      <p>{auth.error}</p>
+
+                      {isActivationRequiredMessage(auth.error) ? (
+                          <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="mt-3 w-full border-red-200 bg-white text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                              onClick={() =>
+                                  navigate(appendRedirectParam('/auth/activate', location.search), {
+                                      replace: true,
+                                  })
+                              }
+                          >
+                              Go to activation
+                          </Button>
+                      ) : null}
+                  </div>
+              ) : null}
                 {/*#endregion redux error */}
 
                 {/*#region register form */}

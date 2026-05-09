@@ -1,6 +1,12 @@
+import { useEffect } from 'react'
 import { KeyRound } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { 
+  Link, 
+  Navigate, 
+  useLocation, 
+  useNavigate 
+} from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
@@ -31,6 +37,10 @@ export function ResetPasswordScreen() {
   const navigate = useNavigate()
   const location = useLocation()
   const auth = useAppSelector(selectAuthState)
+
+  useEffect(() => {
+      dispatch(clearAuthError())
+  }, [dispatch])
 
   const {
     register,
@@ -178,7 +188,7 @@ export function ResetPasswordScreen() {
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={6}
-              placeholder="123456"
+              placeholder="******"
               disabled={isBusy}
               aria-invalid={Boolean(errors.otp)}
               className="text-center text-lg tracking-[0.4em]"

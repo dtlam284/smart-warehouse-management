@@ -9,7 +9,11 @@ import {
     Truck,
     UsersRound,
 } from 'lucide-react'
-import { Navigate, useNavigate, useLocation } from 'react-router'
+import { 
+    Navigate, 
+    useNavigate, 
+    useLocation 
+} from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -18,7 +22,9 @@ import {
     selectRoleThunk,
 } from '@/store/slices/authSlice'
 import { FunctionalPathEnum } from '@/models'
-import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
+import { 
+    appendRedirectParam, 
+    getRedirectParam } from '@/navigators/redirect'
 import { requiresAgentSelection } from './utils'
 import type { AuthRole } from '@/models'
 

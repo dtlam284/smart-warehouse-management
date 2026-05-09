@@ -1,7 +1,12 @@
 import React from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { 
+    Link, 
+    Navigate, 
+    useLocation, 
+    useNavigate 
+} from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'

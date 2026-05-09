@@ -2,6 +2,8 @@ import type { AuthRole } from './TenantInterface'
 
 export interface ISelectTenantRequest {
   tenantId: string | number
+  ClientId: string
+  ClientSecret: string
 }
 
 export interface ISelectRoleRequest {

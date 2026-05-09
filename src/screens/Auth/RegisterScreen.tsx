@@ -1,6 +1,11 @@
+import { useEffect } from 'react'
 import { UserPlus } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useNavigate } from 'react-router'
+import { 
+  Link, 
+  Navigate, 
+  useNavigate 
+} from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
@@ -26,6 +31,10 @@ export function RegisterScreen() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const auth = useAppSelector(selectAuthState)
+
+  useEffect(() => {
+      dispatch(clearAuthError())
+  }, [dispatch])
 
   const {
     register,

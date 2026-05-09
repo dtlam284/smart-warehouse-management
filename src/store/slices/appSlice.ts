@@ -1,17 +1,23 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createSlice } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
 
+//#region interfaces
 export interface IAppState {
   initialized: boolean
   pageTitle: string
   isSidebarCollapsed: boolean
 }
+//#endregion interfaces
 
+//#region states
 const initialState: IAppState = {
   initialized: false,
   pageTitle: '',
   isSidebarCollapsed: false,
 }
+//#endregion states
 
+//#region slices
 const appSlice = createSlice({
   name: 'app',
   initialState,
@@ -27,6 +33,10 @@ const appSlice = createSlice({
     },
   },
 })
+//#endregion slices
 
 export const { setInitialized, setPageTitle, setSidebarCollapsed } = appSlice.actions
+
+//#region reducers
 export default appSlice.reducer
+//#endregion reducers

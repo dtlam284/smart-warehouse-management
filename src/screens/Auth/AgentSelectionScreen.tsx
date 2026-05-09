@@ -12,8 +12,6 @@ import {
 import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
 import type { IAgentItem } from '@/models/tenant/TenantInterface'
 
-
-
 //#region agent selection screen
 export function AgentSelectionScreen() {
     //#region hooks
@@ -25,7 +23,7 @@ export function AgentSelectionScreen() {
     //#endregion hooks
 
     //#region derived state
-    const agents = auth.agents
+    const agents = auth.agents ?? []
     const selectedTenant = auth.selectedTenant
     const isInitialLoading = auth.isLoading && agents.length === 0
     const isBusy = auth.isLoading || auth.isSubmitting  
@@ -78,19 +76,19 @@ export function AgentSelectionScreen() {
         )
     }
 
-    if (auth.status === 'needs_tenant') {
+    if (auth.status === 'needs_role') {
         return (
             <Navigate
-                to={appendRedirectParam('/auth/select-tenant', location.search)}
+                to={appendRedirectParam('/auth/select-role', location.search)}
                 replace
             />
         )
     }
 
-    if (auth.status === 'needs_role') {
+    if (auth.status === 'needs_tenant') {
         return (
             <Navigate
-                to={appendRedirectParam('/auth/select-role', location.search)}
+                to={appendRedirectParam('/auth/select-tenant', location.search)}
                 replace
             />
         )
@@ -215,7 +213,11 @@ export function AgentSelectionScreen() {
                         type="button"
                         variant="outline"
                         disabled={isBusy}
-                        onClick={() => navigate('/auth/select-role', { replace: true })}
+                        onClick={() =>
+                            navigate(appendRedirectParam('/auth/select-role', location.search), {
+                                replace: true,
+                            })
+                        }
                     >
                         Back to function selection
                     </Button>
@@ -235,7 +237,7 @@ interface IAgentCardProps {
 }
 
 function AgentCard({ agent, disabled, onSelect }: IAgentCardProps) {
-    const initial = agent.name.trim().charAt(0).toUpperCase() || 'T'
+    const initial = agent.name.trim().charAt(0).toUpperCase() || 'A'
     const isUnavailable = agent.isAvailable === false || agent.isActive === false
 
     return (

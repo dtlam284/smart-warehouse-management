@@ -1,10 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { authService } from '@/services/auth'
-import { tenantService } from '@/services/tenant'
-import { apiClient } from '@/services/core'
+import { authService } from '@/services/auth/authService'
+import { tenantService } from '@/services/tenant/tenantService'
+import { apiClient } from '@/services/core/apiClient'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
-import { FunctionalPathEnum } from '@/models'
-import { IAdminUser } from '@/models/account'
+import { FunctionalPathEnum } from '@/models/tenant/TenantInterface'
+import { IAdminUser } from '@/models/account/AccountInterface'
 import type { RootState } from '@/store/store'
 import type {
   AuthRole,
@@ -33,6 +33,7 @@ import type {
   ITenantListResponse,
 } from '@/models'
 
+//#region types
 export type AuthStatus =
   | 'idle'
   | 'pending'
@@ -58,7 +59,9 @@ export interface IAuthState {
 }
 
 export type AuthState = IAuthState
+//#endregion types
 
+//#region state
 const initialState: IAuthState = {
   user: null,
   tenants: [],
@@ -74,10 +77,14 @@ const initialState: IAuthState = {
   error: null,
   errorCode: null,
 }
+//#endregion state
 
+//#region constants
 export const ACCOUNT_NOT_ACTIVATED_CODE = 'ACCOUNT_NOT_ACTIVATED'
 export const AGENT_REQUIRED_FUNCTIONS = new Set<AuthRole>([FunctionalPathEnum.DISTRIBUTOR])
+//#endregion constants
 
+//#region helpers
 const toErrorMessage = (error: unknown, fallback: string): string => {
   if (typeof error === 'string' && error.trim().length > 0) {
     return error
@@ -112,6 +119,8 @@ const isActivationRequiredError = (message: string): boolean => {
   return (
     normalizedMessage.includes('not activated') ||
     normalizedMessage.includes('not confirmed') ||
+    normalizedMessage.includes('not been confirmed') ||
+    normalizedMessage.includes('has not been confirmed') ||
     normalizedMessage.includes('not verified') ||
     normalizedMessage.includes('account is inactive') ||
     normalizedMessage.includes('chưa kích hoạt') ||
@@ -156,7 +165,9 @@ const setSettled = (state: IAuthState): void => {
 const clearStoredAuthTokens = (): void => {
   apiClient.clearTokens()
 }
+//#endregion helpers
 
+//#region thunks
 export const loginThunk = createAppAsyncThunk<IAuthLoginResponse, IAuthLoginRequest>(
   'auth/login',
   async (payload, { rejectWithValue }) => {
@@ -272,14 +283,16 @@ export const selectTenantThunk = createAppAsyncThunk<
 })
 
 export const selectRoleThunk = createAppAsyncThunk<
-  ISelectRoleResponse,
-  ISelectRoleRequest
->('auth/selectRole', async (payload, { rejectWithValue }) => {
-  try {
-    return await tenantService.selectRole(payload)
-  } catch (error) {
-    return rejectWithValue(toErrorMessage(error, 'Unable to select function'))
-  }
+    ISelectRoleResponse,
+    ISelectRoleRequest
+>('auth/selectRole', async (payload, { getState, rejectWithValue }) => {
+    try {
+        const { auth } = getState()
+
+        return await tenantService.selectRole(payload, auth.selectedTenant ?? undefined)
+    } catch (error) {
+        return rejectWithValue(toErrorMessage(error, 'Unable to select function'))
+    }
 })
 
 export const fetchAgentsThunk = createAppAsyncThunk<
@@ -303,7 +316,9 @@ export const selectAgentThunk = createAppAsyncThunk<
     return rejectWithValue(toErrorMessage(error, 'Unable to select agent'))
   }
 })
+//#endregion thunks
 
+//#region slices
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -453,7 +468,8 @@ const authSlice = createSlice({
       })
       .addCase(fetchTenantsThunk.fulfilled, (state, action) => {
         setSettled(state)
-        state.tenants = action.payload.items
+        const payload = action.payload as ITenantListResponse | ITenantItem[]
+        state.tenants = Array.isArray(payload) ? payload : payload.items ?? []
       })
       .addCase(fetchTenantsThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to fetch tenants')
@@ -463,7 +479,12 @@ const authSlice = createSlice({
       })
       .addCase(selectTenantThunk.fulfilled, (state, action) => {
         setSettled(state)
-        state.selectedTenant = action.payload.tenant
+
+        const selectedTenant = state.tenants.find(
+          (tenant) => String(tenant.id) === String(action.meta.arg.tenantId),
+        )
+
+        state.selectedTenant = selectedTenant ?? null
         state.selectedAgent = null
         state.agents = []
         state.role = null
@@ -501,7 +522,8 @@ const authSlice = createSlice({
       })
       .addCase(fetchAgentsThunk.fulfilled, (state, action) => {
         setSettled(state)
-        state.agents = action.payload.items
+        const payload = action.payload as IAgentListResponse | IAgentItem[]
+        state.agents = Array.isArray(payload) ? payload : payload.items ?? []
       })
       .addCase(fetchAgentsThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to fetch agents')
@@ -532,7 +554,9 @@ const authSlice = createSlice({
       })
   },
 })
+//#endregion slices
 
+//#region actions
 export const {
   clearAuthError,
   setPendingActivationUsername,
@@ -540,11 +564,13 @@ export const {
   setAuthUser,
   clearAuth,
 } = authSlice.actions
+//#endregion actions
 
 export const loginAdmin = loginThunk
 export const logoutAdmin = logoutThunk
 export const fetchMyProfile = fetchMyProfileThunk
 
+//#region selectors
 export const selectAuthState = (state: RootState) => state.auth
 export const selectAuthUser = (state: RootState) => state.auth.user
 export const selectAuthStatus = (state: RootState) => state.auth.status
@@ -562,5 +588,8 @@ export const selectPendingActivationUsername = (state: RootState) => state.auth.
 export const selectNeedsTenant = (state: RootState) => state.auth.status === 'needs_tenant'
 export const selectNeedsRole = (state: RootState) => state.auth.status === 'needs_role'
 export const selectNeedsAgent = (state: RootState) => state.auth.status === 'needs_agent'
+//#endregion selectors
 
+//#region reducers
 export default authSlice.reducer
+//#endregion reducers

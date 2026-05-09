@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { KeyRound } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useNavigate } from 'react-router'
@@ -23,6 +24,10 @@ export function ForgotPasswordScreen() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const auth = useAppSelector(selectAuthState)
+
+  useEffect(() => {
+      dispatch(clearAuthError())  
+  }, [dispatch])
 
   const {
     register,

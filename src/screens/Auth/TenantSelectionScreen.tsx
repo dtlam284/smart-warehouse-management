@@ -23,14 +23,14 @@ export function TenantSelectionScreen() {
     //#endregion hooks
 
     //#region derived state
-    const tenants = auth.tenants
+    const tenants = auth.tenants ?? []
     const isInitialLoading = auth.isLoading && tenants.length === 0
-    const isBusy = auth.isLoading || auth.isSubmitting  
+    const isBusy = auth.isLoading || auth.isSubmitting
     //#endregion derived state
 
     //#region effects
     React.useEffect(() => {
-        if (auth.status !== 'needs_agent') {
+        if (auth.status !== 'needs_tenant') {
             return
         }
 
@@ -111,15 +111,23 @@ export function TenantSelectionScreen() {
     }
 
     const handleSelectTenant = async (tenant: ITenantItem) => {
-        if (tenant.isActive === false || isBusy) {
+        if (isBusy || tenant.isActive === false) {
             return
         }
 
-        clearErrorIfNeeded()
+        if (!tenant.ClientId || !tenant.ClientSecret) {
+            dispatch(clearAuthError())
+
+            alert('This tenant is missing ClientId or ClientSecret.')
+
+            return
+        }
 
         const result = await dispatch(
             selectTenantThunk({
                 tenantId: tenant.id,
+                ClientId: tenant.ClientId,
+                ClientSecret: tenant.ClientSecret,
             }),
         )
 
@@ -145,9 +153,9 @@ export function TenantSelectionScreen() {
                         Select Tenant
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    {/* <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                         Choose the tenant workspace you want to access.
-                    </p>
+                    </p> */}
                 </div>
                 {/*#endregion header */}
 
@@ -155,7 +163,9 @@ export function TenantSelectionScreen() {
                 {auth.error ? (
                 <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span>{auth.error}</span>
+                        <span>
+                            {auth.error}
+                        </span>
 
                         <Button
                             type="button"
@@ -273,10 +283,10 @@ function TenantEmptyState({ isBusy, onRetry }: ITenantEmptyStateProps) {
             No tenants found
         </h2>
 
-        <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600 dark:text-slate-400">
+        {/* <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600 dark:text-slate-400">
             We could not find any tenant workspaces for this account. Try again or
             contact your administrator.
-        </p>
+        </p> */}
 
         <Button
             type="button"
@@ -310,7 +320,7 @@ function TenantSkeletonList() {
                 <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
                 <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
                 </div>
-            </div>
+            </div>  
             </div>
         ))}
         </div>
