@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     clearAuthError,
+    returnToTenantSelection,
     selectAuthState,
     selectRoleThunk,
 } from '@/store/slices/authSlice'
@@ -244,7 +245,13 @@ export function RoleSelectionScreen() {
                         type="button"
                         variant="outline"
                         disabled={isBusy}
-                        onClick={() => navigate('/auth/select-tenant', { replace: true })}
+                        onClick={() => {
+                            dispatch(returnToTenantSelection())
+
+                            navigate(appendRedirectParam('/auth/select-tenant', location.search), {
+                                replace: true,
+                            })
+                        }}
                     >
                         Back to tenant selection
                     </Button>

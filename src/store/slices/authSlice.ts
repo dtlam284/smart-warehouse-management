@@ -327,6 +327,15 @@ const authSlice = createSlice({
       state.error = null
       state.errorCode = null
     },
+    returnToTenantSelection(state) {
+      state.status = 'needs_tenant'
+      state.selectedTenant = null
+      state.role = null
+      state.agents = []
+      state.selectedAgent = null
+      state.error = null
+      state.errorCode = null
+    },
     setPendingActivationUsername(state, action: PayloadAction<string | null>) {
       state.pendingActivationUsername = action.payload
     },
@@ -559,6 +568,7 @@ const authSlice = createSlice({
 //#region actions
 export const {
   clearAuthError,
+  returnToTenantSelection,
   setPendingActivationUsername,
   resetAuthState,
   setAuthUser,

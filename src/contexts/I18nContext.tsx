@@ -398,7 +398,7 @@ const localizeSubtree = (root: Node, language: AppLanguage): void => {
       localizeAttributes(element, language);
     });
 
-  ensureFieldLabelsInSubtree(rootElement, language);
+  // ensureFieldLabelsInSubtree(rootElement, language);
 };
 
 const readStoredLanguage = (): AppLanguage => {
