@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from '@/constants/api'
 import { apiClient } from '@/services/core'
+import { IAuthMeResponse } from '@/models/authentication'
 import {
   IAdminUser,
   ICreatePermissionRequest,
@@ -42,6 +43,12 @@ export const authService = {
     })
 
     return response
+  },
+
+  async getMe(): Promise<IAuthMeResponse> {
+      return apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
+          retryOnUnauthorized: false,
+      }) 
   },
 
   async refresh(refreshToken?: string): Promise<AuthRefreshResponse> {

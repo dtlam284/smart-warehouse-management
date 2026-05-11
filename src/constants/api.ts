@@ -11,7 +11,7 @@ export const API_ENDPOINTS = {
   //#region auth endpoints
   auth: {
     login: 'api/v3/account/login',
-    // loginEmail: 'api/v3/account/login', // TODO: replace with real endpoint
+    loginEmail: 'api/v3/account/login', // TODO: replace with real endpoint
     register: 'api/account/register-cms',
     activate: 'api/account/confirm-account',
     resendOtp: 'api/account/resend-confirm-account',
@@ -19,8 +19,8 @@ export const API_ENDPOINTS = {
     resetPassword: 'api/account/reset-password',
     refresh: '/auth/refresh',
     logout: '/api/account/logout', // TODO: replace with real endpoint
-    // logoutAll: '/auth/logout/all', // TODO: replace with real endpoint
-    // me: '/auth/me', // TODO: replace with real endpoint
+    logoutAll: '/auth/logout/all', // TODO: replace with real endpoint
+    me: '/auth/me', // TODO: replace with real endpoint
     sessions: '/auth/sessions', // TODO: replace with real endpoint
     sessionById: (id: ApiEntityId): string => withId('/auth/sessions', id), // TODO: replace with real endpoint
   },
