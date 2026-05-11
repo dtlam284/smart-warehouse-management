@@ -8,6 +8,7 @@ import {
     fetchAgentsThunk,
     selectAuthState,
     selectAgentThunk,
+    returnToRoleSelection
 } from '@/store/slices/authSlice'
 import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
 import type { IAgentItem } from '@/models/tenant/TenantInterface'
@@ -19,7 +20,7 @@ export function AgentSelectionScreen() {
     const navigate = useNavigate()
     const location = useLocation()
     const auth = useAppSelector(selectAuthState)
-    const hasRequestedAgentsRef = React.useRef(false)
+    const hasFetchedAgentsRef = React.useRef(false)
     //#endregion hooks
 
     //#region derived state
@@ -35,22 +36,26 @@ export function AgentSelectionScreen() {
             return
         }
 
+        if (!auth.selectedTenant) {
+            return
+        }
+
         if (agents.length > 0) {
             return
         }
 
-        if (hasRequestedAgentsRef.current) {
+        if (hasFetchedAgentsRef.current) {
             return
         }
 
-        hasRequestedAgentsRef.current = true
+        hasFetchedAgentsRef.current = true
         void dispatch(
             fetchAgentsThunk({
                 page: 1,
                 limit: 50,
             }),
         )
-    }, [auth.status, agents.length, dispatch])
+    }, [auth.status, agents.length, auth.selectedTenant?.id, dispatch])
     //#endregion effects
 
     //#region auth redirect
@@ -103,8 +108,11 @@ export function AgentSelectionScreen() {
     }
 
     const handleRetry = () => {
+        if (auth.isLoading || auth.isSubmitting) {
+            return
+        }
+
         clearErrorIfNeeded()
-        hasRequestedAgentsRef.current = true
 
         void dispatch(
             fetchAgentsThunk({
@@ -115,9 +123,11 @@ export function AgentSelectionScreen() {
     }
 
     const handleSelectAgent = async (agent: IAgentItem) => {
-        const isAgentDisabled = agent.isAvailable === false || agent.isActive === false
+        if (isBusy) {
+            return
+        }
 
-        if (isAgentDisabled || isBusy) {
+        if (!agent.workGroupId) {
             return
         }
 
@@ -125,17 +135,17 @@ export function AgentSelectionScreen() {
 
         const result = await dispatch(
             selectAgentThunk({
-                agentId: agent.id,
+                workGroupId: agent.workGroupId,
             }),
         )
 
-        if (selectAgentThunk.fulfilled.match(result)) {
-            navigate(getRedirectParam(location.search), { replace: true })
+        if (!selectAgentThunk.fulfilled.match(result)) {
+            return
         }
+
+        navigate(getRedirectParam(location.search), { replace: true })
     }
     //#endregion handlers
-
-    navigate(getRedirectParam(location.search), { replace: true })
 
     //#region render
     return (
@@ -213,11 +223,10 @@ export function AgentSelectionScreen() {
                         type="button"
                         variant="outline"
                         disabled={isBusy}
-                        onClick={() =>
-                            navigate(appendRedirectParam('/auth/select-role', location.search), {
-                                replace: true,
-                            })
-                        }
+                        onClick={() => {
+                            dispatch(returnToRoleSelection())
+                            navigate('/auth/select-role', { replace: true })
+                        }}
                     >
                         Back to function selection
                     </Button>

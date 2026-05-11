@@ -10,17 +10,17 @@ const withId = (prefix: string, id: ApiEntityId): string => `${prefix}/${id}`
 export const API_ENDPOINTS = {
   //#region auth endpoints
   auth: {
-    login: 'api/v3/account/login', // TODO: replace with real endpoint
-    loginEmail: 'api/v3/account/login', // TODO: replace with real endpoint
-    register: 'api/account/register-cms', // TODO: replace with real endpoint
-    activate: 'api/account/confirm-account', // TODO: replace with real endpoint
-    resendOtp: 'api/account/resend-confirm-account', // TODO: replace with real endpoint
-    forgotPassword: 'api/account/forgot-password', // TODO: replace with real endpoint
-    resetPassword: 'api/account/reset-password', // TODO: replace with real endpoint
-    refresh: '/auth/refresh', // TODO: replace with real endpoint
-    logout: '/auth/logout', // TODO: replace with real endpoint
-    logoutAll: '/auth/logout/all', // TODO: replace with real endpoint
-    me: '/auth/me', // TODO: replace with real endpoint
+    login: 'api/v3/account/login',
+    // loginEmail: 'api/v3/account/login', // TODO: replace with real endpoint
+    register: 'api/account/register-cms',
+    activate: 'api/account/confirm-account',
+    resendOtp: 'api/account/resend-confirm-account',
+    forgotPassword: 'api/account/forgot-password',
+    resetPassword: 'api/account/reset-password',
+    refresh: '/auth/refresh',
+    logout: '/api/account/logout', // TODO: replace with real endpoint
+    // logoutAll: '/auth/logout/all', // TODO: replace with real endpoint
+    // me: '/auth/me', // TODO: replace with real endpoint
     sessions: '/auth/sessions', // TODO: replace with real endpoint
     sessionById: (id: ApiEntityId): string => withId('/auth/sessions', id), // TODO: replace with real endpoint
   },

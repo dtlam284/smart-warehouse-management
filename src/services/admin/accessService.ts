@@ -30,7 +30,7 @@ export const authService = {
   //#region login / refresh
   async login(payload: AuthLoginRequest): Promise<AuthLoginResponse> {
     const response = await apiClient.post<AuthLoginResponse>(
-      API_ENDPOINTS.auth.loginEmail,
+      API_ENDPOINTS.auth.login,
       payload,
       { requiresAuth: false },
     )
@@ -82,10 +82,10 @@ export const authService = {
     apiClient.clearTokens()
   },
 
-  async logoutAll(): Promise<void> {
-    await apiClient.post<void>(API_ENDPOINTS.auth.logoutAll)
-    apiClient.clearTokens()
-  },
+  // async logoutAll(): Promise<void> {
+  //   await apiClient.post<void>(API_ENDPOINTS.auth.logoutAll)
+  //   apiClient.clearTokens()
+  // },
   //#endregion logout
 
   //#region token storage helpers
@@ -106,15 +106,15 @@ export const authService = {
   },
   //#endregion token storage helpers
 
-  //#region profile
-  getMe(): Promise<IAdminUser> {
-    return apiClient.get<IAdminUser>(API_ENDPOINTS.auth.me)
-  },
+  // //#region profile
+  // getMe(): Promise<IAdminUser> {
+  //   return apiClient.get<IAdminUser>(API_ENDPOINTS.auth.me)
+  // },
 
-  updateMe(payload: UpdateMyProfileRequest): Promise<IAdminUser> {
-    return apiClient.patch<IAdminUser>(API_ENDPOINTS.auth.me, payload)
-  },
-  //#endregion profile
+  // updateMe(payload: UpdateMyProfileRequest): Promise<IAdminUser> {
+  //   return apiClient.patch<IAdminUser>(API_ENDPOINTS.auth.me, payload)
+  // },
+  // //#endregion profile
 
   //#region sessions
   getSessions(): Promise<SessionItem[]> {

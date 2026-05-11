@@ -23,10 +23,12 @@ export interface ITenantItem {
 }
 
 export interface IAgentItem {
-  id: string | number
+  id: number | string
   name: string
   code?: string
+  description?: string
   avatarUrl?: string
-  isAvailable: boolean
+  workGroupId: number | string | null
   isActive?: boolean
+  isAvailable?: boolean
 }

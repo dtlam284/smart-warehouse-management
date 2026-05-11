@@ -1,6 +1,11 @@
 import { API_ENDPOINTS } from '@/constants/api'
 import { env } from '@/config/env'
-import { apiClient } from '@/services/core'
+import { apiClient } from '@/services/core/apiClient'
+import { 
+    clearPersistedAuthTokens,
+    getRootAuthToken,
+    persistAuthTokensFromResponse 
+} from '@/services/core/authTokenPersistence'
 import type {
     IAuthActivateRequest,
     IAuthActivateResponse,
@@ -17,6 +22,7 @@ import type {
     IAuthResetPasswordRequest,
     IAuthResetPasswordResponse,
 } from '@/models'
+
 
 //#region backend requests
 interface IAuthLoginApiRequest {
@@ -241,13 +247,18 @@ export const authService = {
     async login(payload: IAuthLoginRequest): Promise<IAuthLoginResponse> {
         const response = await apiClient.post<IAuthLoginResponse>(
             API_ENDPOINTS.auth.login,
-            toLoginApiRequest(payload),
             {
-                requiresAuth: false,
+                Host: env.authLoginHost,
+                Code: env.authLoginCode,
+                Function: env.authLoginFunction,
+                UserName: payload.username.trim(),
+                Password: payload.password,
             },
         )
 
-        persistLoginTokens(response)
+        persistAuthTokensFromResponse(response, {
+            persistRootToken: true,
+        })
 
         return response
     },
@@ -306,12 +317,27 @@ export const authService = {
         )
     },
 
-    logout(): Promise<IAuthLogoutResponse> {
-        return apiClient.post<IAuthLogoutResponse>(API_ENDPOINTS.auth.logout)
-    },
+    async logout(): Promise<IAuthLogoutResponse> {
+        const rootToken = getRootAuthToken()
 
-    getMe(): Promise<IAuthMeResponse> {
-        return apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me)
-    },
+        try {
+            if (rootToken) {
+                await apiClient.post<IAuthLogoutResponse>(
+                    API_ENDPOINTS.auth.logout,
+                    undefined,
+                    {
+                        authToken: rootToken,
+                        retryOnUnauthorized: false,
+                    },
+                )
+            }
+        } finally {
+            clearPersistedAuthTokens()
+        }
+
+        return {
+            success: true,
+        }
+    }
 }
 //#endregion auth services

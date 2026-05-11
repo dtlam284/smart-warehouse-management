@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from '@/store'
 import {
     clearAuthError,
     fetchTenantsThunk,
+    logoutThunk,
     selectAuthState,
     selectTenantThunk,
 } from '@/store/slices/authSlice'
@@ -39,7 +40,7 @@ export function TenantSelectionScreen() {
         }
 
         if (hasRequestedTenantsRef.current) {
-        return
+            return
         }
 
         hasRequestedTenantsRef.current = true
@@ -137,6 +138,18 @@ export function TenantSelectionScreen() {
             })
         }
     }
+
+    const handleBackToLogin = async () => {
+        if (isBusy) {
+            return
+        }
+
+        await dispatch(logoutThunk())
+
+        navigate('/auth/login', {
+            replace: true,
+        })
+    }
     //#endregion handlers
 
     //#region render
@@ -199,6 +212,21 @@ export function TenantSelectionScreen() {
                     ))}
                 </div>
                 )}
+                {/*#endregion content */}
+
+                {/*#region footer */}
+                <div className="mt-8 text-center">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isBusy}
+                        onClick={() => {
+                            void handleBackToLogin()
+                        }}
+                    >
+                        Back to login
+                    </Button>
+                </div>
                 {/*#endregion content */}
             </div>
         </div>

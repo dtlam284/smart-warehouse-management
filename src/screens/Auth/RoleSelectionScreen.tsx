@@ -155,9 +155,7 @@ export function RoleSelectionScreen() {
             return
         }
 
-        const selectedRole = result.payload.role
-
-        if (requiresAgentSelection(selectedRole)) {
+        if (requiresAgentSelection(role)) {
             navigate(appendRedirectParam('/auth/select-agent', location.search), {
                 replace: true,
             })

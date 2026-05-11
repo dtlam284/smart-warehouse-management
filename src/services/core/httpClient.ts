@@ -19,6 +19,18 @@ export interface IRequestOptions {
     signal?: AbortSignal
     timeoutMs?: number
     retryOnUnauthorized?: boolean
+
+    /**
+     * Use a specific access token for one request.
+     * Example: logout must use the original login/root token,
+     * not the current tenant/function/workgroup token.
+     */
+    authToken?: string | null
+
+    /**
+     * Skip attaching Authorization completely.
+     */
+    skipAuth?: boolean
 }
 
 export interface IHttpClientOptions {
@@ -104,9 +116,9 @@ const resolveUrl = (baseUrl: string, path: string, query?: QueryParams): URL => 
     const url = isAbsoluteUrl(path)
         ? new URL(path)
         : new URL(
-            `${stripTrailingSlash(baseUrl)}${ensureLeadingSlash(path)}`,
-            getRuntimeOrigin(),
-        )
+              `${stripTrailingSlash(baseUrl)}${ensureLeadingSlash(path)}`,
+              getRuntimeOrigin(),
+          )
 
     if (query) {
         Object.entries(query).forEach(([key, value]) => {
@@ -323,8 +335,17 @@ export class HttpClient {
 
         const headers = new Headers(options.headers)
         const tokens = this.tokenStorage.getTokens()
+        const explicitAuthToken = options.authToken
+        const shouldSkipAuth = options.skipAuth === true
 
-        if (requiresAuth && tokens?.accessToken) {
+        if (explicitAuthToken) {
+            headers.set('Authorization', `Bearer ${explicitAuthToken}`)
+        } else if (
+            requiresAuth &&
+            !shouldSkipAuth &&
+            tokens?.accessToken &&
+            !headers.has('Authorization')
+        ) {
             headers.set('Authorization', `Bearer ${tokens.accessToken}`)
         }
 
@@ -353,8 +374,10 @@ export class HttpClient {
             if (
                 response.status === 401 &&
                 requiresAuth &&
+                !shouldSkipAuth &&
                 retryOnUnauthorized &&
-                path !== this.refreshPath
+                path !== this.refreshPath &&
+                !explicitAuthToken
             ) {
                 const refreshedToken = await this.tryRefreshToken()
 
@@ -390,7 +413,12 @@ export class HttpClient {
             }
 
             if (error instanceof Error && error.name === 'AbortError') {
-                throw new ApiError('Request timeout or aborted', 408, url.toString(), null)
+                throw new ApiError(
+                    'Request timeout or aborted',
+                    408,
+                    url.toString(),
+                    null,
+                )
             }
 
             throw new ApiError('Network request failed', 0, url.toString(), error)

@@ -17,7 +17,7 @@ export interface IAgentListRequest {
 }
 
 export interface ISelectAgentRequest {
-  agentId: string | number
+  workGroupId: string | number
 }
 
 export interface ISelectWorkgroupRequest {

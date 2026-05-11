@@ -234,17 +234,17 @@ export const resetPasswordThunk = createAppAsyncThunk<
   }
 })
 
-export const fetchMyProfileThunk = createAppAsyncThunk<IAdminUser, void>(
-  'auth/fetchMyProfile',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await authService.getMe()
-      return response.user
-    } catch (error) {
-      return rejectWithValue(toErrorMessage(error, 'Unable to fetch profile'))
-    }
-  },
-)
+// export const fetchMyProfileThunk = createAppAsyncThunk<IAdminUser, void>(
+//   'auth/fetchMyProfile',
+//   async (_, { rejectWithValue }) => {
+//     try {
+//       const response = await authService.getMe()
+//       return response.user
+//     } catch (error) {
+//       return rejectWithValue(toErrorMessage(error, 'Unable to fetch profile'))
+//     }
+//   },
+// )
 
 export const logoutThunk = createAppAsyncThunk<void, void>(
   'auth/logout',
@@ -296,25 +296,36 @@ export const selectRoleThunk = createAppAsyncThunk<
 })
 
 export const fetchAgentsThunk = createAppAsyncThunk<
-  IAgentListResponse,
-  IAgentListRequest | undefined
->('auth/fetchAgents', async (payload, { rejectWithValue }) => {
-  try {
-    return await tenantService.listAgents(payload ?? {})
-  } catch (error) {
-    return rejectWithValue(toErrorMessage(error, 'Unable to fetch agents'))
-  }
+    IAgentListResponse,
+    IAgentListRequest | undefined
+>('auth/fetchAgents', async (payload, { getState, rejectWithValue }) => {
+    try {
+        const { auth } = getState()
+
+        return await tenantService.listAgents(
+            payload ?? {},
+            auth.selectedTenant ?? undefined,
+            auth.role,
+        )
+    } catch (error) {
+        return rejectWithValue(toErrorMessage(error, 'Unable to fetch agents'))
+    }
 })
 
 export const selectAgentThunk = createAppAsyncThunk<
-  ISelectAgentResponse,
-  ISelectAgentRequest
->('auth/selectAgent', async (payload, { rejectWithValue }) => {
-  try {
-    return await tenantService.selectAgent(payload)
-  } catch (error) {
-    return rejectWithValue(toErrorMessage(error, 'Unable to select agent'))
-  }
+    ISelectAgentResponse,
+    ISelectAgentRequest
+>('auth/selectAgent', async (payload, { getState, rejectWithValue }) => {
+    try {
+        const { auth } = getState()
+
+        return await tenantService.selectAgent(
+            payload,
+            auth.selectedTenant ?? undefined,
+        )
+    } catch (error) {
+        return rejectWithValue(toErrorMessage(error, 'Unable to select agent'))
+    }
 })
 //#endregion thunks
 
@@ -329,12 +340,23 @@ const authSlice = createSlice({
     },
     returnToTenantSelection(state) {
       state.status = 'needs_tenant'
+      state.tenants = []
       state.selectedTenant = null
       state.role = null
       state.agents = []
       state.selectedAgent = null
       state.error = null
       state.errorCode = null
+      state.isAuthenticated = false
+    },
+    returnToRoleSelection(state) {
+        state.status = 'needs_role'
+        state.role = null
+        state.agents = []
+        state.selectedAgent = null
+        state.error = null
+        state.errorCode = null
+        state.isAuthenticated = false
     },
     setPendingActivationUsername(state, action: PayloadAction<string | null>) {
       state.pendingActivationUsername = action.payload
@@ -358,11 +380,21 @@ const authSlice = createSlice({
         setSubmitPending(state)
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
-        setSettled(state)
-        state.user = action.payload.user
+        state.isLoading = false
+        state.isSubmitting = false
+        state.error = null
+        state.errorCode = null
+
+        state.user = action.payload.user ?? state.user
+
+        state.tenants = []
+        state.selectedTenant = null
+        state.agents = []
+        state.selectedAgent = null
+        state.role = null
+
         state.status = 'needs_tenant'
         state.isAuthenticated = false
-        state.pendingActivationUsername = null
       })
       .addCase(loginThunk.rejected, (state, action) => {
         const message = action.payload ?? 'Unable to login'
@@ -454,24 +486,24 @@ const authSlice = createSlice({
         setRejected(state, action.payload ?? 'Unable to reset password')
         state.status = 'idle'
       })
-      .addCase(fetchMyProfileThunk.pending, (state) => {
-        setActionPending(state)
-      })
-      .addCase(fetchMyProfileThunk.fulfilled, (state, action) => {
-        setSettled(state)
-        state.user = action.payload
+      // .addCase(fetchMyProfileThunk.pending, (state) => {
+      //   setActionPending(state)
+      // })
+      // .addCase(fetchMyProfileThunk.fulfilled, (state, action) => {
+      //   setSettled(state)
+      //   state.user = action.payload
 
-        if (state.status === 'idle' || state.status === 'pending') {
-          state.status = 'authenticated'
-          state.isAuthenticated = true
-        }
-      })
-      .addCase(fetchMyProfileThunk.rejected, (state, action) => {
-        setRejected(state, action.payload ?? 'Unable to fetch profile')
-        state.user = null
-        state.isAuthenticated = false
-        state.status = 'idle'
-      })
+      //   if (state.status === 'idle' || state.status === 'pending') {
+      //     state.status = 'authenticated'
+      //     state.isAuthenticated = true
+      //   }
+      // })
+      // .addCase(fetchMyProfileThunk.rejected, (state, action) => {
+      //   setRejected(state, action.payload ?? 'Unable to fetch profile')
+      //   state.user = null
+      //   state.isAuthenticated = false
+      //   state.status = 'idle'
+      // })
       .addCase(fetchTenantsThunk.pending, (state) => {
         setActionPending(state)
       })
@@ -507,44 +539,56 @@ const authSlice = createSlice({
         setActionPending(state)
       })
       .addCase(selectRoleThunk.fulfilled, (state, action) => {
-        setSettled(state)
+          setSettled(state)
 
-        const selectedRole = action.payload.role
+          const selectedRole = action.meta.arg.role
 
-        state.role = selectedRole
-        state.selectedAgent = null
+          state.role = selectedRole
+          state.selectedAgent = null
 
-        if (requiresAgentSelection(selectedRole)) {
-          state.status = 'needs_agent'
-          state.isAuthenticated = false
-          return
-        }
+          if (requiresAgentSelection(selectedRole)) {
+              state.status = 'needs_agent'
+              state.isAuthenticated = false
+              return
+          }
 
-        state.status = 'authenticated'
-        state.isAuthenticated = true
+          state.status = 'authenticated'
+          state.isAuthenticated = true
       })
       .addCase(selectRoleThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to select function')
       })
       .addCase(fetchAgentsThunk.pending, (state) => {
-        setActionPending(state)
+          state.isLoading = true
+          state.isSubmitting = false
+          state.error = null
+          state.errorCode = null
       })
       .addCase(fetchAgentsThunk.fulfilled, (state, action) => {
-        setSettled(state)
-        const payload = action.payload as IAgentListResponse | IAgentItem[]
-        state.agents = Array.isArray(payload) ? payload : payload.items ?? []
+          setSettled(state)
+
+          const payload = action.payload as IAgentListResponse | IAgentItem[]
+
+          state.agents = Array.isArray(payload) ? payload : payload.items ?? []
+          state.status = 'needs_agent'
+          state.isAuthenticated = false
       })
       .addCase(fetchAgentsThunk.rejected, (state, action) => {
-        setRejected(state, action.payload ?? 'Unable to fetch agents')
+          setRejected(state, action.payload ?? 'Unable to fetch agents')
+          state.status = 'needs_agent'
+          state.isAuthenticated = false
       })
       .addCase(selectAgentThunk.pending, (state) => {
         setActionPending(state)
       })
       .addCase(selectAgentThunk.fulfilled, (state, action) => {
-        setSettled(state)
-        state.selectedAgent = action.payload.agent
-        state.status = 'authenticated'
-        state.isAuthenticated = true
+          state.isLoading = false
+          state.isSubmitting = false
+          state.error = null
+          state.errorCode = null
+          state.selectedAgent = action.payload.agent ?? state.selectedAgent
+          state.status = 'authenticated'
+          state.isAuthenticated = true
       })
       .addCase(selectAgentThunk.rejected, (state, action) => {
         setRejected(state, action.payload ?? 'Unable to select agent')
@@ -555,8 +599,20 @@ const authSlice = createSlice({
         state.error = null
         state.errorCode = null
       })
-      .addCase(logoutThunk.fulfilled, () => {
-        return initialState
+      .addCase(logoutThunk.fulfilled, (state) => {
+          state.user = null
+          state.tenants = []
+          state.selectedTenant = null
+          state.agents = []
+          state.selectedAgent = null
+          state.role = null
+          state.status = 'idle'
+          state.isAuthenticated = false
+          state.isLoading = false
+          state.isSubmitting = false
+          state.error = null
+          state.errorCode = null
+          state.pendingActivationUsername = null
       })
       .addCase(logoutThunk.rejected, () => {
         return initialState
@@ -569,6 +625,7 @@ const authSlice = createSlice({
 export const {
   clearAuthError,
   returnToTenantSelection,
+  returnToRoleSelection,
   setPendingActivationUsername,
   resetAuthState,
   setAuthUser,
@@ -578,7 +635,7 @@ export const {
 
 export const loginAdmin = loginThunk
 export const logoutAdmin = logoutThunk
-export const fetchMyProfile = fetchMyProfileThunk
+// export const fetchMyProfile = fetchMyProfileThunk
 
 //#region selectors
 export const selectAuthState = (state: RootState) => state.auth
