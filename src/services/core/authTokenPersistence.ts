@@ -16,10 +16,7 @@ const getRecord = (value: unknown): TokenRecord => {
     return {}
 }
 
-const getStringValue = (
-    records: TokenRecord[],
-    keys: string[],
-): string | undefined => {
+const getStringValue = (records: TokenRecord[], keys: string[]): string | undefined => {
     for (const record of records) {
         for (const key of keys) {
             const value = record[key]
@@ -33,10 +30,7 @@ const getStringValue = (
     return undefined
 }
 
-const getNumberValue = (
-    records: TokenRecord[],
-    keys: string[],
-): number | undefined => {
+const getNumberValue = (records: TokenRecord[], keys: string[]): number | undefined => {
     for (const record of records) {
         for (const key of keys) {
             const value = record[key]
@@ -93,18 +87,10 @@ const getTokenRecordsFromResponse = (response: unknown): TokenRecord[] => {
     return [dataRecord, tokenRecord, rootRecord]
 }
 
-export const getAccessTokenFromResponse = (
-    response: unknown,
-): string | undefined => {
+export const getAccessTokenFromResponse = (response: unknown): string | undefined => {
     const records = getTokenRecordsFromResponse(response)
 
-    return getStringValue(records, [
-        'AccessToken',
-        'accessToken',
-        'access_token',
-        'Token',
-        'token',
-    ])
+    return getStringValue(records, ['AccessToken', 'accessToken', 'access_token', 'Token', 'token'])
 }
 
 export const persistRootAuthToken = (accessToken: string): void => {
@@ -133,11 +119,7 @@ export const persistAuthTokensFromResponse = (
         'token',
     ])
 
-    const refreshToken = getStringValue(records, [
-        'RefreshToken',
-        'refreshToken',
-        'refresh_token',
-    ])
+    const refreshToken = getStringValue(records, ['RefreshToken', 'refreshToken', 'refresh_token'])
 
     const rawExpires = getNumberValue(records, [
         'Expires',

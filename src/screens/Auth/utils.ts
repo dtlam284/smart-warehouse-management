@@ -2,24 +2,24 @@ import { AGENT_REQUIRED_FUNCTIONS } from '@/store/slices/authSlice'
 import type { AuthRole } from '@/models'
 
 export const isActivationRequiredMessage = (message?: string | undefined): boolean => {
-  if (!message) {
-    return false
-  }
+    if (!message) {
+        return false
+    }
 
-  const normalizedMessage = message.toLowerCase()
+    const normalizedMessage = message.toLowerCase()
 
-  return (
-    normalizedMessage.includes('not activated') ||
-    normalizedMessage.includes('not confirmed') ||
-    normalizedMessage.includes('not been confirmed') ||
-    normalizedMessage.includes('has not been confirmed') ||
-    normalizedMessage.includes('not verified') ||
-    normalizedMessage.includes('account is inactive') ||
-    normalizedMessage.includes('chưa kích hoạt') ||
-    normalizedMessage.includes('chua kich hoat') ||
-    normalizedMessage.includes('chưa xác thực') ||
-    normalizedMessage.includes('chua xac thuc')
-  )
+    return (
+        normalizedMessage.includes('not activated') ||
+        normalizedMessage.includes('not confirmed') ||
+        normalizedMessage.includes('not been confirmed') ||
+        normalizedMessage.includes('has not been confirmed') ||
+        normalizedMessage.includes('not verified') ||
+        normalizedMessage.includes('account is inactive') ||
+        normalizedMessage.includes('chưa kích hoạt') ||
+        normalizedMessage.includes('chua kich hoat') ||
+        normalizedMessage.includes('chưa xác thực') ||
+        normalizedMessage.includes('chua xac thuc')
+    )
 }
 
 export const isEmailUsername = (username: string): boolean => {

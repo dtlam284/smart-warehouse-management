@@ -15,17 +15,17 @@ import { NotFoundScreen } from '@/screens/NotFound/NotFoundScreen'
 
 // Lazy-loaded screen components for code splitting
 const DashboardScreen = React.lazy(() =>
-  import('../screens/Dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
+    import('../screens/Dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
 )
 
-const TenantSelectionScreen = React.lazy(() => 
-  import('../screens/Auth/TenantSelectionScreen').then((module) => ({
-      default: module.TenantSelectionScreen,
-  })),
+const TenantSelectionScreen = React.lazy(() =>
+    import('../screens/Auth/TenantSelectionScreen').then((module) => ({
+        default: module.TenantSelectionScreen,
+    })),
 )
 
-const RoleSelectionScreen = React.lazy(() => 
-  import('../screens/Auth/RoleSelectionScreen').then((module) => ({
+const RoleSelectionScreen = React.lazy(() =>
+    import('../screens/Auth/RoleSelectionScreen').then((module) => ({
         default: module.RoleSelectionScreen,
     })),
 )
@@ -34,95 +34,95 @@ const AgentSelectionScreen = React.lazy(() =>
     import('../screens/Auth/AgentSelectionScreen').then((module) => ({
         default: module.AgentSelectionScreen,
     })),
-) 
+)
 
 /**
  * Suspense wrapper for lazy-loaded route components.
  * Shows a minimal loading spinner while the chunk downloads.
  */
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
-  return (
-    <React.Suspense
-      fallback={
-        <div className="flex items-center justify-center py-24">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
-        </div>
-      }
-    >
-      {children}
-    </React.Suspense>
-  )
+    return (
+        <React.Suspense
+            fallback={
+                <div className="flex items-center justify-center py-24">
+                    <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                </div>
+            }
+        >
+            {children}
+        </React.Suspense>
+    )
 }
 
 /**
  * Wraps a lazy component in Suspense for use in route config.
  */
 function lazyRoute(LazyComponent: React.LazyExoticComponent<React.ComponentType>) {
-  return function LazyRouteWrapper() {
-    return (
-      <SuspenseRoute>
-        <LazyComponent />
-      </SuspenseRoute>
-    )
-  }
+    return function LazyRouteWrapper() {
+        return (
+            <SuspenseRoute>
+                <LazyComponent />
+            </SuspenseRoute>
+        )
+    }
 }
 
 export const router = createBrowserRouter([
-  {
-    path: '/auth/login',
-    Component: LoginScreen,
-    ErrorBoundary: ErrorBoundaryScreen,
-  },
-  {
-    path: '/auth/register',
-    Component: RegisterScreen,
-    ErrorBoundary: ErrorBoundaryScreen,
-  },
-  {
-    path: '/auth/activate',
-    Component: ActivationScreen,
-    ErrorBoundary: ErrorBoundaryScreen,
-  },
-  {
-    path: '/auth/forgot-password',
-    Component: ForgotPasswordScreen,
-    ErrorBoundary: ErrorBoundaryScreen,
-  },
-  {
-    path: '/auth/reset-password',
-    Component: ResetPasswordScreen,
-    ErrorBoundary: ErrorBoundaryScreen,
-  },
-  {
-    path: '/auth/session-required',
-    Component: SessionRequiredScreen,
-    ErrorBoundary: ErrorBoundaryScreen,
-  },
-  {
-    Component: AuthFlowGuard,
-    ErrorBoundary: ErrorBoundaryScreen,
-    children: [
-        {
-          path: '/auth/select-tenant',
-          Component: lazyRoute(TenantSelectionScreen),
-        },
-        {
-          path: '/auth/select-role',
-          Component: lazyRoute(RoleSelectionScreen),
-        },
-        {
-          path: '/auth/select-agent',
-          Component: lazyRoute(AgentSelectionScreen),
-        },
-    ],
-  },
-  {
-    path: '/',
-    Component: ProtectedAdminLayout,
-    ErrorBoundary: ErrorBoundaryScreen,
-    children: [
-      { index: true, Component: lazyRoute(DashboardScreen) },
-      { path: '*', Component: NotFoundScreen },
-    ],
-  },
+    {
+        path: '/auth/login',
+        Component: LoginScreen,
+        ErrorBoundary: ErrorBoundaryScreen,
+    },
+    {
+        path: '/auth/register',
+        Component: RegisterScreen,
+        ErrorBoundary: ErrorBoundaryScreen,
+    },
+    {
+        path: '/auth/activate',
+        Component: ActivationScreen,
+        ErrorBoundary: ErrorBoundaryScreen,
+    },
+    {
+        path: '/auth/forgot-password',
+        Component: ForgotPasswordScreen,
+        ErrorBoundary: ErrorBoundaryScreen,
+    },
+    {
+        path: '/auth/reset-password',
+        Component: ResetPasswordScreen,
+        ErrorBoundary: ErrorBoundaryScreen,
+    },
+    {
+        path: '/auth/session-required',
+        Component: SessionRequiredScreen,
+        ErrorBoundary: ErrorBoundaryScreen,
+    },
+    {
+        Component: AuthFlowGuard,
+        ErrorBoundary: ErrorBoundaryScreen,
+        children: [
+            {
+                path: '/auth/select-tenant',
+                Component: lazyRoute(TenantSelectionScreen),
+            },
+            {
+                path: '/auth/select-role',
+                Component: lazyRoute(RoleSelectionScreen),
+            },
+            {
+                path: '/auth/select-agent',
+                Component: lazyRoute(AgentSelectionScreen),
+            },
+        ],
+    },
+    {
+        path: '/',
+        Component: ProtectedAdminLayout,
+        ErrorBoundary: ErrorBoundaryScreen,
+        children: [
+            { index: true, Component: lazyRoute(DashboardScreen) },
+            { path: '*', Component: NotFoundScreen },
+        ],
+    },
 ])

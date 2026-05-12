@@ -1,10 +1,10 @@
 import { API_ENDPOINTS } from '@/constants/api'
 import { env } from '@/config/env'
 import { apiClient } from '@/services/core/apiClient'
-import { 
+import {
     clearPersistedAuthTokens,
     getRootAuthToken,
-    persistAuthTokensFromResponse 
+    persistAuthTokensFromResponse,
 } from '@/services/core/authTokenPersistence'
 import type {
     IAuthActivateRequest,
@@ -23,7 +23,6 @@ import type {
     IAdminUser,
     IAuthMeResponse,
 } from '@/models'
-
 
 //#region backend requests
 interface IAuthLoginApiRequest {
@@ -128,9 +127,7 @@ const toActivateApiRequest = (payload: IAuthActivateRequest): IAuthActivateApiRe
     }
 }
 
-const toResendOtpApiRequest = (
-    payload: IAuthResendOtpRequest,
-): IAuthResendOtpApiRequest => {
+const toResendOtpApiRequest = (payload: IAuthResendOtpRequest): IAuthResendOtpApiRequest => {
     return {
         Username: payload.username,
     }
@@ -162,10 +159,7 @@ const toResetPasswordApiRequest = (
 //#region Response Mappers
 type LoginResponseRecord = Record<string, unknown>
 
-const getStringValue = (
-    record: LoginResponseRecord,
-    keys: string[],
-): string | undefined => {
+const getStringValue = (record: LoginResponseRecord, keys: string[]): string | undefined => {
     for (const key of keys) {
         const value = record[key]
 
@@ -177,10 +171,7 @@ const getStringValue = (
     return undefined
 }
 
-const getNumberValue = (
-    record: LoginResponseRecord,
-    keys: string[],
-): number | undefined => {
+const getNumberValue = (record: LoginResponseRecord, keys: string[]): number | undefined => {
     for (const key of keys) {
         const value = record[key]
 
@@ -246,16 +237,13 @@ const persistLoginTokens = (response: IAuthLoginResponse): void => {
 //#region auth services
 export const authService = {
     async login(payload: IAuthLoginRequest): Promise<IAuthLoginResponse> {
-        const response = await apiClient.post<IAuthLoginResponse>(
-            API_ENDPOINTS.auth.login,
-            {
-                Host: env.authLoginHost,
-                Code: env.authLoginCode,
-                Function: env.authLoginFunction,
-                UserName: payload.username.trim(),
-                Password: payload.password,
-            },
-        )
+        const response = await apiClient.post<IAuthLoginResponse>(API_ENDPOINTS.auth.login, {
+            Host: env.authLoginHost,
+            Code: env.authLoginCode,
+            Function: env.authLoginFunction,
+            UserName: payload.username.trim(),
+            Password: payload.password,
+        })
 
         persistAuthTokensFromResponse(response, {
             persistRootToken: true,
@@ -294,9 +282,7 @@ export const authService = {
         )
     },
 
-    forgotPassword(
-        payload: IAuthForgotPasswordRequest,
-    ): Promise<IAuthForgotPasswordResponse> {
+    forgotPassword(payload: IAuthForgotPasswordRequest): Promise<IAuthForgotPasswordResponse> {
         return apiClient.post<IAuthForgotPasswordResponse>(
             API_ENDPOINTS.auth.forgotPassword,
             toForgotPasswordApiRequest(payload),
@@ -306,9 +292,7 @@ export const authService = {
         )
     },
 
-    resetPassword(
-        payload: IAuthResetPasswordRequest,
-    ): Promise<IAuthResetPasswordResponse> {
+    resetPassword(payload: IAuthResetPasswordRequest): Promise<IAuthResetPasswordResponse> {
         return apiClient.post<IAuthResetPasswordResponse>(
             API_ENDPOINTS.auth.resetPassword,
             toResetPasswordApiRequest(payload),
@@ -319,7 +303,7 @@ export const authService = {
     },
 
     async getMe(): Promise<IAdminUser> {
-        const response = await apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
+        await apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
             retryOnUnauthorized: false,
         })
 
@@ -331,14 +315,10 @@ export const authService = {
 
         try {
             if (rootToken) {
-                await apiClient.post<IAuthLogoutResponse>(
-                    API_ENDPOINTS.auth.logout,
-                    undefined,
-                    {
-                        authToken: rootToken,
-                        retryOnUnauthorized: false,
-                    },
-                )
+                await apiClient.post<IAuthLogoutResponse>(API_ENDPOINTS.auth.logout, undefined, {
+                    authToken: rootToken,
+                    retryOnUnauthorized: false,
+                })
             }
         } finally {
             clearPersistedAuthTokens()

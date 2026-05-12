@@ -142,18 +142,16 @@ const toTenantListResponse = (
     const rawItems = Array.isArray(data)
         ? data
         : Array.isArray(dataRecord.Items)
-            ? dataRecord.Items
-            : Array.isArray(dataRecord.items)
-                ? dataRecord.items
-                : Array.isArray(responseRecord.items)
-                    ? responseRecord.items
-                    : []
+          ? dataRecord.Items
+          : Array.isArray(dataRecord.items)
+            ? dataRecord.items
+            : Array.isArray(responseRecord.items)
+              ? responseRecord.items
+              : []
 
     return {
         ...(responseRecord as Partial<ITenantListResponse>),
-        items: rawItems.map((tenant) =>
-            toTenantItem(tenant as IBackendTenantItem),
-        ),
+        items: rawItems.map((tenant) => toTenantItem(tenant as IBackendTenantItem)),
     } as ITenantListResponse
 }
 
@@ -191,56 +189,54 @@ const toAgentListResponse = (
     const rawItems = Array.isArray(data)
         ? data
         : Array.isArray(dataRecord.Result)
-            ? dataRecord.Result
-            : Array.isArray(dataRecord.result)
-                ? dataRecord.result
-                : Array.isArray(dataRecord.Items)
-                    ? dataRecord.Items
-                    : Array.isArray(dataRecord.items)
-                        ? dataRecord.items
-                        : Array.isArray(dataRecord.Data)
-                            ? dataRecord.Data
-                            : Array.isArray(dataRecord.data)
-                                ? dataRecord.data
-                                : Array.isArray(responseRecord.Result)
-                                    ? responseRecord.Result
-                                    : Array.isArray(responseRecord.result)
-                                        ? responseRecord.result
-                                        : Array.isArray(responseRecord.items)
-                                            ? responseRecord.items
-                                            : []
+          ? dataRecord.Result
+          : Array.isArray(dataRecord.result)
+            ? dataRecord.result
+            : Array.isArray(dataRecord.Items)
+              ? dataRecord.Items
+              : Array.isArray(dataRecord.items)
+                ? dataRecord.items
+                : Array.isArray(dataRecord.Data)
+                  ? dataRecord.Data
+                  : Array.isArray(dataRecord.data)
+                    ? dataRecord.data
+                    : Array.isArray(responseRecord.Result)
+                      ? responseRecord.Result
+                      : Array.isArray(responseRecord.result)
+                        ? responseRecord.result
+                        : Array.isArray(responseRecord.items)
+                          ? responseRecord.items
+                          : []
 
     const total =
         typeof dataRecord.Total === 'number'
             ? dataRecord.Total
             : typeof dataRecord.total === 'number'
-                ? dataRecord.total
-                : typeof dataRecord.TotalCount === 'number'
-                    ? dataRecord.TotalCount
-                    : typeof dataRecord.totalCount === 'number'
-                        ? dataRecord.totalCount
-                        : typeof responseRecord.total === 'number'
-                            ? responseRecord.total
-                            : rawItems.length
+              ? dataRecord.total
+              : typeof dataRecord.TotalCount === 'number'
+                ? dataRecord.TotalCount
+                : typeof dataRecord.totalCount === 'number'
+                  ? dataRecord.totalCount
+                  : typeof responseRecord.total === 'number'
+                    ? responseRecord.total
+                    : rawItems.length
 
     const page =
         typeof dataRecord.PageIndex === 'number'
             ? dataRecord.PageIndex
             : typeof dataRecord.pageIndex === 'number'
-                ? dataRecord.pageIndex
-                : 1
+              ? dataRecord.pageIndex
+              : 1
 
     const limit =
         typeof dataRecord.PageSize === 'number'
             ? dataRecord.PageSize
             : typeof dataRecord.pageSize === 'number'
-                ? dataRecord.pageSize
-                : rawItems.length
+              ? dataRecord.pageSize
+              : rawItems.length
 
     return {
-        items: rawItems.map((agent) =>
-            toAgentItem(agent as IBackendAgentItem),
-        ),
+        items: rawItems.map((agent) => toAgentItem(agent as IBackendAgentItem)),
         total,
         page,
         limit,
@@ -267,27 +263,23 @@ const toAgentListApiRequest = (
 //#region tenant service
 export const tenantService = {
     async listTenants(tenant?: ITenantItem): Promise<ITenantListResponse> {
-        const response = await apiClient.get<
-            IBackendTenantItem[] | ITenantListResponse | unknown
-        >(API_ENDPOINTS.tenant.list, {
-            headers: createTenantHeaders(tenant),
-        })
+        const response = await apiClient.get<IBackendTenantItem[] | ITenantListResponse | unknown>(
+            API_ENDPOINTS.tenant.list,
+            {
+                headers: createTenantHeaders(tenant),
+            },
+        )
 
         return toTenantListResponse(response)
     },
 
-    async selectTenant(
-        payload: ISelectTenantRequest,
-    ): Promise<ISelectTenantResponse> {
-        const response = await apiClient.get<ISelectTenantResponse>(
-            API_ENDPOINTS.tenant.select,
-            {
-                headers: {
-                    ClientId: payload.ClientId,
-                    ClientSecret: payload.ClientSecret,
-                },
+    async selectTenant(payload: ISelectTenantRequest): Promise<ISelectTenantResponse> {
+        const response = await apiClient.get<ISelectTenantResponse>(API_ENDPOINTS.tenant.select, {
+            headers: {
+                ClientId: payload.ClientId,
+                ClientSecret: payload.ClientSecret,
             },
-        )
+        })
 
         persistAuthTokensFromResponse(response)
 
@@ -298,15 +290,12 @@ export const tenantService = {
         payload: ISelectRoleRequest,
         tenant?: ITenantItem,
     ): Promise<ISelectRoleResponse> {
-        const response = await apiClient.get<ISelectRoleResponse>(
-            API_ENDPOINTS.role.select,
-            {
-                headers: createTenantHeaders(tenant),
-                query: {
-                    functionCode: toFunctionCode(payload.role),
-                },
+        const response = await apiClient.get<ISelectRoleResponse>(API_ENDPOINTS.role.select, {
+            headers: createTenantHeaders(tenant),
+            query: {
+                functionCode: toFunctionCode(payload.role),
             },
-        )
+        })
 
         persistAuthTokensFromResponse(response)
 
@@ -354,6 +343,6 @@ export const tenantService = {
         persistAuthTokensFromResponse(response)
 
         return response
-    }
+    },
 }
 //#endregion tenant service

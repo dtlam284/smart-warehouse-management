@@ -8,126 +8,126 @@ import { IAdminUser } from '@/models/account'
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
 interface AuthContextValue {
-  user: IAdminUser | null
-  status: AuthStatus
-  isAuthenticated: boolean
-  error: unknown
-  refreshProfile: () => Promise<IAdminUser | null>
-  logout: () => Promise<void>
+    user: IAdminUser | null
+    status: AuthStatus
+    isAuthenticated: boolean
+    error: unknown
+    refreshProfile: () => Promise<IAdminUser | null>
+    logout: () => Promise<void>
 }
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 
 const hasStoredSession = (): boolean => {
-  const tokens = authService.getStoredTokens()
-  return Boolean(tokens?.accessToken && tokens.refreshToken)
+    const tokens = authService.getStoredTokens()
+    return Boolean(tokens?.accessToken && tokens.refreshToken)
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient()
-  const [hasSession, setHasSession] = React.useState<boolean>(() => hasStoredSession())
+    const queryClient = useQueryClient()
+    const [hasSession, setHasSession] = React.useState<boolean>(() => hasStoredSession())
 
-  const meQuery = useQuery<IAdminUser | null>({
-    queryKey: queryKeys.auth.me,
-    queryFn: async () => {
-      try {
-        return await authService.getMe()
-      } catch (error) {
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          authService.clearStoredTokens()
-          setHasSession(false)
-          queryClient.setQueryData(queryKeys.auth.me, null)
-          return null
+    const meQuery = useQuery<IAdminUser | null>({
+        queryKey: queryKeys.auth.me,
+        queryFn: async () => {
+            try {
+                return await authService.getMe()
+            } catch (error) {
+                if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+                    authService.clearStoredTokens()
+                    setHasSession(false)
+                    queryClient.setQueryData(queryKeys.auth.me, null)
+                    return null
+                }
+
+                throw error
+            }
+        },
+        enabled: hasSession,
+    })
+
+    React.useEffect(() => {
+        const onStorageChange = (event: StorageEvent) => {
+            if (event.key === null) {
+                setHasSession(hasStoredSession())
+                return
+            }
+
+            if (event.key === env.tokenStorageKey) {
+                setHasSession(hasStoredSession())
+            }
         }
 
-        throw error
-      }
-    },
-    enabled: hasSession,
-  })
+        window.addEventListener('storage', onStorageChange)
+        return () => window.removeEventListener('storage', onStorageChange)
+    }, [])
 
-  React.useEffect(() => {
-    const onStorageChange = (event: StorageEvent) => {
-      if (event.key === null) {
-        setHasSession(hasStoredSession())
-        return
-      }
+    const refreshProfile = React.useCallback(async (): Promise<IAdminUser | null> => {
+        const nextHasSession = hasStoredSession()
+        setHasSession(nextHasSession)
 
-      if (event.key === env.tokenStorageKey) {
-        setHasSession(hasStoredSession())
-      }
-    }
+        if (!nextHasSession) {
+            queryClient.setQueryData(queryKeys.auth.me, null)
+            return null
+        }
 
-    window.addEventListener('storage', onStorageChange)
-    return () => window.removeEventListener('storage', onStorageChange)
-  }, [])
+        const result = await meQuery.refetch()
+        return result.data ?? null
+    }, [meQuery, queryClient])
 
-  const refreshProfile = React.useCallback(async (): Promise<IAdminUser | null> => {
-    const nextHasSession = hasStoredSession()
-    setHasSession(nextHasSession)
+    const logout = React.useCallback(async (): Promise<void> => {
+        const activeSession = hasStoredSession()
 
-    if (!nextHasSession) {
-      queryClient.setQueryData(queryKeys.auth.me, null)
-      return null
-    }
+        if (activeSession) {
+            try {
+                await authService.logout()
+            } catch {
+                authService.clearStoredTokens()
+            }
+        } else {
+            authService.clearStoredTokens()
+        }
 
-    const result = await meQuery.refetch()
-    return result.data ?? null
-  }, [meQuery, queryClient])
+        setHasSession(false)
+        queryClient.setQueryData(queryKeys.auth.me, null)
+    }, [queryClient])
 
-  const logout = React.useCallback(async (): Promise<void> => {
-    const activeSession = hasStoredSession()
+    const status: AuthStatus = React.useMemo(() => {
+        if (!hasSession) {
+            return 'unauthenticated'
+        }
 
-    if (activeSession) {
-      try {
-        await authService.logout()
-      } catch {
-        authService.clearStoredTokens()
-      }
-    } else {
-      authService.clearStoredTokens()
-    }
+        if (meQuery.isPending) {
+            return 'loading'
+        }
 
-    setHasSession(false)
-    queryClient.setQueryData(queryKeys.auth.me, null)
-  }, [queryClient])
+        if (meQuery.data) {
+            return 'authenticated'
+        }
 
-  const status: AuthStatus = React.useMemo(() => {
-    if (!hasSession) {
-      return 'unauthenticated'
-    }
+        return 'unauthenticated'
+    }, [hasSession, meQuery.data, meQuery.isPending])
 
-    if (meQuery.isPending) {
-      return 'loading'
-    }
+    const value = React.useMemo<AuthContextValue>(
+        () => ({
+            user: meQuery.data ?? null,
+            status,
+            isAuthenticated: status === 'authenticated',
+            error: meQuery.error,
+            refreshProfile,
+            logout,
+        }),
+        [logout, meQuery.data, meQuery.error, refreshProfile, status],
+    )
 
-    if (meQuery.data) {
-      return 'authenticated'
-    }
-
-    return 'unauthenticated'
-  }, [hasSession, meQuery.data, meQuery.isPending])
-
-  const value = React.useMemo<AuthContextValue>(
-    () => ({
-      user: meQuery.data ?? null,
-      status,
-      isAuthenticated: status === 'authenticated',
-      error: meQuery.error,
-      refreshProfile,
-      logout,
-    }),
-    [logout, meQuery.data, meQuery.error, refreshProfile, status],
-  )
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = (): AuthContextValue => {
-  const context = React.useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
+    const context = React.useContext(AuthContext)
+    if (!context) {
+        throw new Error('useAuth must be used within AuthProvider')
+    }
 
-  return context
+    return context
 }

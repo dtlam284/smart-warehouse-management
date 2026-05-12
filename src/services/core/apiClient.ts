@@ -4,8 +4,8 @@ import { HttpClient } from './httpClient'
 import { tokenStorage } from './tokenStorage'
 
 export const apiClient = new HttpClient({
-  baseUrl: env.apiBaseUrl,
-  timeoutMs: env.apiTimeoutMs,
-  tokenStorage,
-  refreshPath: API_ENDPOINTS.auth.refresh,
+    baseUrl: env.apiBaseUrl,
+    timeoutMs: env.apiTimeoutMs,
+    tokenStorage,
+    refreshPath: API_ENDPOINTS.auth.refresh,
 })

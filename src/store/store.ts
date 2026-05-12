@@ -5,34 +5,34 @@ import appReducer from './slices/appSlice'
 import authReducer from './slices/authSlice'
 
 const persistConfig = {
-  key: 'cms',
-  storage,
-  whitelist: ['auth', 'app'],
+    key: 'cms',
+    storage,
+    whitelist: ['auth', 'app'],
 }
 
 const rootReducer = combineReducers({
-  app: appReducer,
-  auth: authReducer,
+    app: appReducer,
+    auth: authReducer,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
 
 export const store = configureStore({
-  reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [
-          'persist/PERSIST',
-          'persist/REHYDRATE',
-          'persist/PAUSE',
-          'persist/PURGE',
-          'persist/REGISTER',
-          'persist/FLUSH',
-        ],
-      },
-    }),
-  devTools: import.meta.env.DEV,
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({
+            serializableCheck: {
+                ignoredActions: [
+                    'persist/PERSIST',
+                    'persist/REHYDRATE',
+                    'persist/PAUSE',
+                    'persist/PURGE',
+                    'persist/REGISTER',
+                    'persist/FLUSH',
+                ],
+            },
+        }),
+    devTools: import.meta.env.DEV,
 })
 
 export const persistor = persistStore(store)

@@ -3,35 +3,35 @@ import type { PayloadAction } from '@reduxjs/toolkit'
 
 //#region interfaces
 export interface IAppState {
-  initialized: boolean
-  pageTitle: string
-  isSidebarCollapsed: boolean
+    initialized: boolean
+    pageTitle: string
+    isSidebarCollapsed: boolean
 }
 //#endregion interfaces
 
 //#region states
 const initialState: IAppState = {
-  initialized: false,
-  pageTitle: '',
-  isSidebarCollapsed: false,
+    initialized: false,
+    pageTitle: '',
+    isSidebarCollapsed: false,
 }
 //#endregion states
 
 //#region slices
 const appSlice = createSlice({
-  name: 'app',
-  initialState,
-  reducers: {
-    setInitialized(state, action: PayloadAction<boolean>) {
-      state.initialized = action.payload
+    name: 'app',
+    initialState,
+    reducers: {
+        setInitialized(state, action: PayloadAction<boolean>) {
+            state.initialized = action.payload
+        },
+        setPageTitle(state, action: PayloadAction<string>) {
+            state.pageTitle = action.payload
+        },
+        setSidebarCollapsed(state, action: PayloadAction<boolean>) {
+            state.isSidebarCollapsed = action.payload
+        },
     },
-    setPageTitle(state, action: PayloadAction<string>) {
-      state.pageTitle = action.payload
-    },
-    setSidebarCollapsed(state, action: PayloadAction<boolean>) {
-      state.isSidebarCollapsed = action.payload
-    },
-  },
 })
 //#endregion slices
 

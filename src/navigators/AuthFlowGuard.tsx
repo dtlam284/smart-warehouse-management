@@ -6,7 +6,7 @@ import { appendRedirectParam, getRedirectParam } from './redirect'
 const AUTH_FLOW_PATH_BY_STATUS = {
     needs_tenant: '/auth/select-tenant',
     needs_role: '/auth/select-role',
-    needs_agent: '/auth/select-agent'
+    needs_agent: '/auth/select-agent',
 } as const
 
 function AuthFlowCheckingScreen() {
@@ -17,9 +17,7 @@ function AuthFlowCheckingScreen() {
                 <h1 className="text-base font-semibold text-slate-900 dark:text-slate-50">
                     Checking auth flow
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Please wait.
-                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Please wait.</p>
             </div>
         </div>
     )
@@ -44,7 +42,7 @@ export function AuthFlowGuard() {
     const allowedPath = AUTH_FLOW_PATH_BY_STATUS[status]
 
     if (location.pathname !== allowedPath) {
-         return <Navigate to={appendRedirectParam(allowedPath, location.search)} replace />
+        return <Navigate to={appendRedirectParam(allowedPath, location.search)} replace />
     }
 
     return <Outlet />

@@ -1,3 +1,3 @@
-import { apiClient } from "@/services/core/apiClient";
+import { apiClient } from '@/services/core/apiClient'
 
-export const baseApi = apiClient;
+export const baseApi = apiClient

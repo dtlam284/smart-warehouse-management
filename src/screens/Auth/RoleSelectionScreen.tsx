@@ -9,11 +9,7 @@ import {
     Truck,
     UsersRound,
 } from 'lucide-react'
-import { 
-    Navigate, 
-    useNavigate, 
-    useLocation 
-} from 'react-router'
+import { Navigate, useNavigate, useLocation } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -23,9 +19,7 @@ import {
     selectRoleThunk,
 } from '@/store/slices/authSlice'
 import { FunctionalPathEnum } from '@/models'
-import { 
-    appendRedirectParam, 
-    getRedirectParam } from '@/navigators/redirect'
+import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
 import { requiresAgentSelection } from './utils'
 import type { AuthRole } from '@/models'
 
@@ -47,7 +41,8 @@ const ROLE_OPTIONS: Array<{
     {
         value: FunctionalPathEnum.DISTRIBUTOR,
         title: 'Distributor',
-        description: 'Work with distributor/workgroup-level operations. This requires agent selection.',
+        description:
+            'Work with distributor/workgroup-level operations. This requires agent selection.',
         badge: 'Requires agent',
         icon: Truck,
     },
@@ -80,23 +75,18 @@ export function RoleSelectionScreen() {
     //#region hooks
     const dispatch = useAppDispatch()
     const navigate = useNavigate()
-    const location = useLocation() 
+    const location = useLocation()
     const auth = useAppSelector(selectAuthState)
     //#endregion hooks
 
     //#region derived state
     const selectedTenant = auth.selectedTenant
-    const isBusy = auth.isLoading || auth.isSubmitting 
+    const isBusy = auth.isLoading || auth.isSubmitting
     //#endregion derived state
 
     //#region auth redirect
     if (auth.status === 'idle') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/login', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/login', location.search)} replace />
     }
 
     if (auth.status === 'authenticated') {
@@ -104,30 +94,15 @@ export function RoleSelectionScreen() {
     }
 
     if (!selectedTenant) {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-tenant', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-tenant', location.search)} replace />
     }
 
     if (auth.status === 'needs_tenant') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-tenant', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-tenant', location.search)} replace />
     }
 
     if (auth.status === 'needs_agent') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-agent', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-agent', location.search)} replace />
     }
     //#endregion auth redirect
 
@@ -197,24 +172,22 @@ export function RoleSelectionScreen() {
 
                 {/*#region redux error */}
                 {auth.error ? (
-                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span>
-                            {auth.error}
-                        </span>
+                    <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <span>{auth.error}</span>
 
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={isBusy}
-                            onClick={clearErrorIfNeeded}
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Clear
-                        </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={isBusy}
+                                onClick={clearErrorIfNeeded}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Clear
+                            </Button>
+                        </div>
                     </div>
-                </div>
                 ) : null}
                 {/*#endregion redux error */}
 
@@ -222,16 +195,16 @@ export function RoleSelectionScreen() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {ROLE_OPTIONS.map((option) => (
                         <RoleCard
-                        key={option.value}
-                        title={option.title}
-                        description={option.description}
-                        badge={option.badge}
-                        icon={option.icon}
-                        disabled={isBusy}
-                        requiresAgent={requiresAgentSelection(option.value)}
-                        onSelect={() => {
-                            void handleSelectRole(option.value)
-                        }}
+                            key={option.value}
+                            title={option.title}
+                            description={option.description}
+                            badge={option.badge}
+                            icon={option.icon}
+                            disabled={isBusy}
+                            requiresAgent={requiresAgentSelection(option.value)}
+                            onSelect={() => {
+                                void handleSelectRole(option.value)
+                            }}
                         />
                     ))}
                 </div>
@@ -281,13 +254,13 @@ function RoleCard({
     disabled,
     requiresAgent,
     onSelect,
-    }: IRoleCardProps) {
+}: IRoleCardProps) {
     return (
         <button
-        type="button"
-        disabled={disabled}
-        onClick={onSelect}
-        className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:border-slate-200 disabled:hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:disabled:hover:border-slate-800"
+            type="button"
+            disabled={disabled}
+            onClick={onSelect}
+            className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:border-slate-200 disabled:hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:disabled:hover:border-slate-800"
         >
             <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors group-hover:bg-blue-50 group-hover:text-blue-700 dark:bg-slate-800 dark:text-slate-200 dark:group-hover:bg-blue-950 dark:group-hover:text-blue-300">
@@ -301,9 +274,9 @@ function RoleCard({
                         </h2>
 
                         {requiresAgent ? (
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                            Agent flow
-                        </span>
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                                Agent flow
+                            </span>
                         ) : null}
                     </div>
 

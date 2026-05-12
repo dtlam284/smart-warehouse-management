@@ -8,7 +8,7 @@ import {
     fetchAgentsThunk,
     selectAuthState,
     selectAgentThunk,
-    returnToRoleSelection
+    returnToRoleSelection,
 } from '@/store/slices/authSlice'
 import { appendRedirectParam, getRedirectParam } from '@/navigators/redirect'
 import type { IAgentItem } from '@/models/tenant/TenantInterface'
@@ -27,7 +27,7 @@ export function AgentSelectionScreen() {
     const agents = auth.agents ?? []
     const selectedTenant = auth.selectedTenant
     const isInitialLoading = auth.isLoading && agents.length === 0
-    const isBusy = auth.isLoading || auth.isSubmitting  
+    const isBusy = auth.isLoading || auth.isSubmitting
     //#endregion derived state
 
     //#region effects
@@ -60,12 +60,7 @@ export function AgentSelectionScreen() {
 
     //#region auth redirect
     if (auth.status === 'idle') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/login', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/login', location.search)} replace />
     }
 
     if (auth.status === 'authenticated') {
@@ -73,30 +68,15 @@ export function AgentSelectionScreen() {
     }
 
     if (!selectedTenant) {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-tenant', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-tenant', location.search)} replace />
     }
 
     if (auth.status === 'needs_role') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-role', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-role', location.search)} replace />
     }
 
     if (auth.status === 'needs_tenant') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-tenant', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-tenant', location.search)} replace />
     }
     //#endregion auth redirect
 
@@ -307,29 +287,29 @@ interface IAgentEmptyStateProps {
 function AgentEmptyState({ isBusy, onRetry }: IAgentEmptyStateProps) {
     return (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            <Building2 className="h-6 w-6" />
-        </div>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <Building2 className="h-6 w-6" />
+            </div>
 
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
-            No agents found
-        </h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+                No agents found
+            </h2>
 
-        <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600 dark:text-slate-400">
-            We could not find any agent workspaces for this account. Try again or
-            contact your administrator.
-        </p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600 dark:text-slate-400">
+                We could not find any agent workspaces for this account. Try again or contact your
+                administrator.
+            </p>
 
-        <Button
-            type="button"
-            variant="outline"
-            disabled={isBusy}
-            onClick={onRetry}
-            className="mt-5"
-        >
-            <RefreshCw className="h-4 w-4" />
-            Retry
-        </Button>
+            <Button
+                type="button"
+                variant="outline"
+                disabled={isBusy}
+                onClick={onRetry}
+                className="mt-5"
+            >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+            </Button>
         </div>
     )
 }

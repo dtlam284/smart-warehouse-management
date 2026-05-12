@@ -9,9 +9,7 @@ import { LanguageToggle } from '@/components/LanguageToggle'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { logoutThunk, selectAuthUser } from '@/store/slices/authSlice'
 
-const NAV_ITEMS = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-]
+const NAV_ITEMS = [{ name: 'Dashboard', href: '/', icon: LayoutDashboard }]
 
 export function AdminLayout() {
     const dispatch = useAppDispatch()
@@ -19,15 +17,8 @@ export function AdminLayout() {
     const location = useLocation()
     const user = useAppSelector(selectAuthUser)
     const isMobile = useIsMobile(1024)
-    const [sidebarOpen, setSidebarOpen] = React.useState(!isMobile)
-
-    React.useEffect(() => {
-        if (isMobile) {
-            setSidebarOpen(false)
-        } else {
-            setSidebarOpen(true)
-        }
-    }, [isMobile, location.pathname])
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false)
+    const sidebarOpen = isMobile ? isMobileSidebarOpen : true
 
     const handleLogout = async () => {
         await dispatch(logoutThunk())
@@ -42,7 +33,7 @@ export function AdminLayout() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => setSidebarOpen(false)}
+                        onClick={() => setIsMobileSidebarOpen(false)}
                         className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm"
                     />
                 )}
@@ -139,7 +130,7 @@ export function AdminLayout() {
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            onClick={() => setIsMobileSidebarOpen(true)}
                             className="-ml-2 rounded-md p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
                             aria-label="Toggle sidebar"
                         >

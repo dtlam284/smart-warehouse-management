@@ -1,12 +1,7 @@
 import React from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { 
-    Link, 
-    Navigate, 
-    useLocation, 
-    useNavigate 
-} from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { authSchemas } from '@/validations/schemas'
@@ -24,7 +19,7 @@ import { maskAuthTarget, sanitizeOtp } from './utils'
 interface IActivationFormValues {
     otp: string
 }
-//#endregion interfaces 
+//#endregion interfaces
 
 //#region constants
 const RESEND_COOLDOWN_SECONDS = 60
@@ -97,8 +92,8 @@ export function ActivationScreen() {
                     </h1>
 
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        We could not find an account waiting for activation. Please sign in
-                        or register again.
+                        We could not find an account waiting for activation. Please sign in or
+                        register again.
                     </p>
 
                     <div className="mt-6 flex flex-col gap-3">

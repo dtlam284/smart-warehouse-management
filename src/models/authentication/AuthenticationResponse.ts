@@ -1,46 +1,46 @@
 import type { IAdminUser } from '@/models/account'
 
 export interface IAuthLoginResponse {
-  token: string
-  refreshToken: string
-  tokenExpires: number
-  user: IAdminUser
-  message?: string
+    token: string
+    refreshToken: string
+    tokenExpires: number
+    user: IAdminUser
+    message?: string
 }
 
 export interface IAuthRegisterResponse {
-  message: string
+    message: string
 }
 
 export interface IAuthActivateResponse {
-  user?: IAdminUser
-  message: string
+    user?: IAdminUser
+    message: string
 }
 
 export interface IAuthResendOtpResponse {
-  message: string
+    message: string
 }
 
 export interface IAuthForgotPasswordResponse {
-  message: string
+    message: string
 }
 
 export interface IAuthResetPasswordResponse {
-  message: string
+    message: string
 }
 
 export interface IAuthMeResponse {
-  user: IAdminUser
+    user: IAdminUser
 }
 
 export interface IAuthRefreshResponse {
-  token: string
-  refreshToken: string
-  tokenExpires: number
+    token: string
+    refreshToken: string
+    tokenExpires: number
 }
 
 export interface IAuthLogoutResponse {
-  success: true
+    success: true
 }
 
 export type IAuthLogoutAllResponse = void

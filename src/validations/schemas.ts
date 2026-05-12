@@ -1,7 +1,7 @@
-import type { RegisterOptions } from "react-hook-form";
+import type { RegisterOptions } from 'react-hook-form'
 
 //#region shared validation rules
-const requiredMessage = 'This field is required';
+const requiredMessage = 'This field is required'
 //#endregion shared validation rules
 
 //#region auth validation schemas
@@ -64,7 +64,7 @@ export const authSchemas = {
             pattern: {
                 value: /^\d{6}$/,
                 message: 'OTP must be exactly 6 digits',
-            },  
+            },
         } satisfies RegisterOptions,
     },
 

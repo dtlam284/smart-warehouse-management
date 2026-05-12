@@ -5,14 +5,7 @@ import { cn } from './utils'
 type InputProps = React.ComponentProps<'input'>
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
-    {
-        className,
-        type,
-        placeholder,
-        title,
-        'aria-label': ariaLabel,
-        ...props
-    },
+    { className, type, placeholder, title, 'aria-label': ariaLabel, ...props },
     ref,
 ) {
     const { t } = useI18n()

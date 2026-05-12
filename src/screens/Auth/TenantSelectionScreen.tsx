@@ -67,12 +67,7 @@ export function TenantSelectionScreen() {
     }, [auth.status, tenants.length, dispatch])
 
     if (auth.status === 'idle') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/login', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/login', location.search)} replace />
     }
 
     if (auth.status === 'authenticated') {
@@ -80,21 +75,11 @@ export function TenantSelectionScreen() {
     }
 
     if (auth.status === 'needs_role') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-role', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-role', location.search)} replace />
     }
 
     if (auth.status === 'needs_agent') {
-        return (
-            <Navigate
-                to={appendRedirectParam('/auth/select-agent', location.search)}
-                replace
-            />
-        )
+        return <Navigate to={appendRedirectParam('/auth/select-agent', location.search)} replace />
     }
     //#endregion auth redirect
 
@@ -174,43 +159,41 @@ export function TenantSelectionScreen() {
 
                 {/*#region redux error */}
                 {auth.error ? (
-                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span>
-                            {auth.error}
-                        </span>
+                    <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <span>{auth.error}</span>
 
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={isBusy}
-                            onClick={handleRetry}
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Retry
-                        </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={isBusy}
+                                onClick={handleRetry}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Retry
+                            </Button>
+                        </div>
                     </div>
-                </div>
                 ) : null}
                 {/*#endregion redux error */}
 
                 {/*#region content */}
                 {isInitialLoading ? (
-                <TenantSkeletonList />
+                    <TenantSkeletonList />
                 ) : tenants.length === 0 ? (
-                <TenantEmptyState isBusy={isBusy} onRetry={handleRetry} />
+                    <TenantEmptyState isBusy={isBusy} onRetry={handleRetry} />
                 ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {tenants.map((tenant) => (
-                    <TenantCard
-                        key={String(tenant.id)}
-                        tenant={tenant}
-                        disabled={tenant.isActive === false || isBusy}
-                        onSelect={handleSelectTenant}
-                    />
-                    ))}
-                </div>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {tenants.map((tenant) => (
+                            <TenantCard
+                                key={String(tenant.id)}
+                                tenant={tenant}
+                                disabled={tenant.isActive === false || isBusy}
+                                onSelect={handleSelectTenant}
+                            />
+                        ))}
+                    </div>
                 )}
                 {/*#endregion content */}
 
@@ -251,42 +234,42 @@ function TenantCard({ tenant, disabled, onSelect }: ITenantCardProps) {
             disabled={disabled}
             onClick={() => onSelect(tenant)}
             className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:border-slate-200 disabled:hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:disabled:hover:border-slate-800"
-            >
+        >
             <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                {tenant.logoUrl ? (
-                    <img
-                    src={tenant.logoUrl}
-                    alt={tenant.name}
-                    className="h-full w-full object-cover"
-                    />
-                ) : (
-                    initial
-                )}
+                    {tenant.logoUrl ? (
+                        <img
+                            src={tenant.logoUrl}
+                            alt={tenant.name}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        initial
+                    )}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                <h2 className="truncate text-base font-semibold text-slate-900 dark:text-slate-50">
-                    {tenant.name}
-                </h2>
+                    <h2 className="truncate text-base font-semibold text-slate-900 dark:text-slate-50">
+                        {tenant.name}
+                    </h2>
 
-                <div className="mt-2 flex flex-wrap gap-2">
-                    {tenant.planName ? (
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                        {tenant.planName}
-                    </span>
-                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {tenant.planName ? (
+                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                {tenant.planName}
+                            </span>
+                        ) : null}
 
-                    {tenant.isActive === false ? (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        Inactive
-                    </span>
-                    ) : (
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                        Active
-                    </span>
-                    )}
-                </div>
+                        {tenant.isActive === false ? (
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                Inactive
+                            </span>
+                        ) : (
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                Active
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         </button>
@@ -303,29 +286,29 @@ interface ITenantEmptyStateProps {
 function TenantEmptyState({ isBusy, onRetry }: ITenantEmptyStateProps) {
     return (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            <Building2 className="h-6 w-6" />
-        </div>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <Building2 className="h-6 w-6" />
+            </div>
 
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
-            No tenants found
-        </h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+                No tenants found
+            </h2>
 
-        {/* <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600 dark:text-slate-400">
+            {/* <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600 dark:text-slate-400">
             We could not find any tenant workspaces for this account. Try again or
             contact your administrator.
         </p> */}
 
-        <Button
-            type="button"
-            variant="outline"
-            disabled={isBusy}
-            onClick={onRetry}
-            className="mt-5"
-        >
-            <RefreshCw className="h-4 w-4" />
-            Retry
-        </Button>
+            <Button
+                type="button"
+                variant="outline"
+                disabled={isBusy}
+                onClick={onRetry}
+                className="mt-5"
+            >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+            </Button>
         </div>
     )
 }
@@ -335,22 +318,22 @@ function TenantEmptyState({ isBusy, onRetry }: ITenantEmptyStateProps) {
 function TenantSkeletonList() {
     return (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-            <div
-            key={index}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            >
-            <div className="flex items-start gap-4">
-                <div className="h-12 w-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+            {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                    key={index}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <div className="flex items-start gap-4">
+                        <div className="h-12 w-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
 
-                <div className="flex-1 space-y-3">
-                <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
+                        <div className="flex-1 space-y-3">
+                            <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                            <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                            <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
+                        </div>
+                    </div>
                 </div>
-            </div>  
-            </div>
-        ))}
+            ))}
         </div>
     )
 }
