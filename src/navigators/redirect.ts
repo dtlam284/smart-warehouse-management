@@ -2,7 +2,7 @@ import type { Location } from 'react-router'
 
 const DEFAULT_POST_AUTH_APP =  '/'
 
-export const getCurrentRedirectPath = (location: Location): string => {
+export const getCurrentRedirectPath = (_location: Location): string => {
     return '${location.pathname}${location.search}${location.hash}'
 }
 

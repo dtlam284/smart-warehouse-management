@@ -1,6 +1,6 @@
 import React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { authService } from '@/services/admin'
+import { authService } from '@/services/auth/authService'
 import { env } from '@/config/env'
 import { ApiError, queryKeys } from '@/services/core'
 import { IAdminUser } from '@/models/account'
@@ -27,9 +27,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const [hasSession, setHasSession] = React.useState<boolean>(() => hasStoredSession())
 
-  const meQuery = useQuery({
+  const meQuery = useQuery<IAdminUser | null>({
     queryKey: queryKeys.auth.me,
-    queryFn: () => authService.getMe(),
+    queryFn: async () => {
+      try {
+        return await authService.getMe()
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          authService.clearStoredTokens()
+          setHasSession(false)
+          queryClient.setQueryData(queryKeys.auth.me, null)
+          return null
+        }
+
+        throw error
+      }
+    },
     enabled: hasSession,
   })
 
@@ -48,14 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('storage', onStorageChange)
     return () => window.removeEventListener('storage', onStorageChange)
   }, [])
-
-  React.useEffect(() => {
-    if (meQuery.error instanceof ApiError && (meQuery.error.status === 401 || meQuery.error.status === 403)) {
-      authService.clearStoredTokens()
-      setHasSession(false)
-      queryClient.setQueryData(queryKeys.auth.me, null)
-    }
-  }, [meQuery.error, queryClient])
 
   const refreshProfile = React.useCallback(async (): Promise<IAdminUser | null> => {
     const nextHasSession = hasStoredSession()

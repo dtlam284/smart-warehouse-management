@@ -1,4 +1,4 @@
-import { Navigate, Outlet, redirect, useLocation } from 'react-router'
+import { Navigate, Outlet, useLocation } from 'react-router'
 import { useAppSelector } from '@/store'
 import { selectAuthStatus } from '@/store/slices/authSlice'
 import { appendRedirectParam, getRedirectParam } from './redirect'

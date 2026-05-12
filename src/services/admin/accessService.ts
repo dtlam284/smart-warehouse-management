@@ -45,12 +45,6 @@ export const authService = {
     return response
   },
 
-  async getMe(): Promise<IAuthMeResponse> {
-      return apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
-          retryOnUnauthorized: false,
-      }) 
-  },
-
   async refresh(refreshToken?: string): Promise<AuthRefreshResponse> {
     const currentTokens = apiClient.tokens
     const token = refreshToken ?? currentTokens?.refreshToken
@@ -89,10 +83,10 @@ export const authService = {
     apiClient.clearTokens()
   },
 
-  // async logoutAll(): Promise<void> {
-  //   await apiClient.post<void>(API_ENDPOINTS.auth.logoutAll)
-  //   apiClient.clearTokens()
-  // },
+  async logoutAll(): Promise<void> {
+    await apiClient.post<void>(API_ENDPOINTS.auth.logoutAll)
+    apiClient.clearTokens()
+  },
   //#endregion logout
 
   //#region token storage helpers
@@ -113,15 +107,19 @@ export const authService = {
   },
   //#endregion token storage helpers
 
-  // //#region profile
-  // getMe(): Promise<IAdminUser> {
-  //   return apiClient.get<IAdminUser>(API_ENDPOINTS.auth.me)
-  // },
+  //#region profile
+  async getMe(): Promise<IAdminUser> {
+    const response = await apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
+      retryOnUnauthorized: false,
+    })
 
-  // updateMe(payload: UpdateMyProfileRequest): Promise<IAdminUser> {
-  //   return apiClient.patch<IAdminUser>(API_ENDPOINTS.auth.me, payload)
-  // },
-  // //#endregion profile
+    return await authService.getMe()
+  },
+
+  updateMe(payload: UpdateMyProfileRequest): Promise<IAdminUser> {
+    return apiClient.patch<IAdminUser>(API_ENDPOINTS.auth.me, payload)
+  },
+  //#endregion profile
 
   //#region sessions
   getSessions(): Promise<SessionItem[]> {
@@ -161,7 +159,7 @@ export const usersService = {
     const normalizedQuery = {
       page: query?.page,
       limit: query?.limit,
-      // Backend users endpoint currently accepts `filters` and `sort` JSON.
+
       filters:
         dedupedRoles.length > 0
           ? {
@@ -169,7 +167,7 @@ export const usersService = {
             }
           : (query?.filterOptions ?? query?.filters),
       sort: query?.sort,
-      // Keep these for forwards/backwards compatibility across API revisions.
+
       search: query?.search?.trim() || undefined,
       role:
         typeof normalizedRoleId === 'number' && Number.isFinite(normalizedRoleId)

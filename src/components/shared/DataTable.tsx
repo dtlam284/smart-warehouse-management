@@ -101,7 +101,7 @@ export function DataTable<T>({
   const search = searchValue ?? internalSearch
   const hasSearch = Boolean(onSearchChange || searchValue !== undefined)
   const isServerPagination = Boolean(onPageChange)
-  const availableFilters = filters ?? []
+  const availableFilters = React.useMemo(() => filters ?? [], [filters])
   const activeFilters = useMemo(
     () => availableFilters.filter((filter) => hasFilterValue(filter.value)),
     [availableFilters],
@@ -133,7 +133,7 @@ export function DataTable<T>({
 
     const half = Math.floor(maxVisible / 2)
     let startPage = Math.max(1, boundedPage - half)
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+    const endPage = Math.min(totalPages, startPage + maxVisible - 1)
     startPage = Math.max(1, endPage - maxVisible + 1)
 
     return Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index)

@@ -5,7 +5,7 @@ export class AuthService {
   static refresh = authService.refresh
   static logout = authService.logout
   // static logoutAll = authService.logoutAll
-  // static getMe = authService.getMe
+  static getMe = authService.getMe
   // static updateMe = authService.updateMe
   static getSessions = authService.getSessions
   static revokeSession = authService.revokeSession

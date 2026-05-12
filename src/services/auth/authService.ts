@@ -14,13 +14,14 @@ import type {
     IAuthLoginRequest,
     IAuthLoginResponse,
     IAuthLogoutResponse,
-    IAuthMeResponse,
     IAuthRegisterRequest,
     IAuthRegisterResponse,
     IAuthResendOtpRequest,
     IAuthResendOtpResponse,
     IAuthResetPasswordRequest,
     IAuthResetPasswordResponse,
+    IAdminUser,
+    IAuthMeResponse,
 } from '@/models'
 
 
@@ -317,6 +318,14 @@ export const authService = {
         )
     },
 
+    async getMe(): Promise<IAdminUser> {
+        const response = await apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
+            retryOnUnauthorized: false,
+        })
+
+        return await authService.getMe()
+    },
+
     async logout(): Promise<IAuthLogoutResponse> {
         const rootToken = getRootAuthToken()
 
@@ -338,6 +347,14 @@ export const authService = {
         return {
             success: true,
         }
-    }
+    },
+
+    getStoredTokens() {
+        return apiClient.tokens
+    },
+
+    clearStoredTokens(): void {
+        apiClient.clearTokens()
+    },
 }
 //#endregion auth services

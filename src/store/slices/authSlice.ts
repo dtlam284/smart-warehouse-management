@@ -234,17 +234,16 @@ export const resetPasswordThunk = createAppAsyncThunk<
   }
 })
 
-// export const fetchMyProfileThunk = createAppAsyncThunk<IAdminUser, void>(
-//   'auth/fetchMyProfile',
-//   async (_, { rejectWithValue }) => {
-//     try {
-//       const response = await authService.getMe()
-//       return response.user
-//     } catch (error) {
-//       return rejectWithValue(toErrorMessage(error, 'Unable to fetch profile'))
-//     }
-//   },
-// )
+export const fetchMyProfileThunk = createAppAsyncThunk<IAdminUser, void>(
+  'auth/fetchMyProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await authService.getMe()
+    } catch (error) {
+      return rejectWithValue(toErrorMessage(error, 'Unable to fetch profile'))
+    }
+  },
+)
 
 export const logoutThunk = createAppAsyncThunk<void, void>(
   'auth/logout',
