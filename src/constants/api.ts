@@ -102,7 +102,7 @@ export const API_ENDPOINTS = {
     //#endregion handover
 
     //#region return delivery
-    returDelivery: {
+    returnDelivery: {
         getReturnDetail: 'api/orders/return-with-items/items',
         confirmReturn: 'api/orders/return-with-items',
         confirmReturnNoLayout: 'api/orders/return-with-items-no-layout',
