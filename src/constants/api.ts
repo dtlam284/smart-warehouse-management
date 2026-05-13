@@ -86,6 +86,7 @@ export const API_ENDPOINTS = {
         updatePacking: 'api/v2/orders/delivery-packing',
         removePacking: 'api/v2/orders/remove-packing',
         packingList: 'api/v2/orders/get-by-page-packing',
+        packingListSimple: 'api/v2/orders/get-list-packing',
         statistics: 'api/v2/orders/get-order-packing-statistics',
     },
     //#endregion packing
