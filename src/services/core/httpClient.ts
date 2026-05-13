@@ -315,8 +315,8 @@ export class HttpClient {
     }
 
     async delete<TResponse>(
-        path: string,
-        options: Omit<IRequestOptions, 'body'> = {},
+        path: string, 
+        options?: IRequestOptions
     ): Promise<TResponse> {
         return this.request<TResponse>('DELETE', path, options)
     }
