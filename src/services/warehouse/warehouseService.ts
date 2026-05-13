@@ -8,9 +8,12 @@ import type {
     WarehouseOperationConfig,
 } from '@/models/warehouse/WarehouseInterface'
 
+//#region constants
 const WAREHOUSE_CONFIG_KEY = 'WAREHOUSE'
 const LAYOUT_CONFIG_KEY = 'LAYOUT'
+//#endregion constants
 
+//#region helpers
 function parseWarehouseOperationConfig(configs: GetConfigResponse): WarehouseOperationConfig {
     const warehouseConfig = configs.find((item) => item.Key === WAREHOUSE_CONFIG_KEY)
 
@@ -20,11 +23,17 @@ function parseWarehouseOperationConfig(configs: GetConfigResponse): WarehouseOpe
         HasLayout: layoutConfig?.Values === '1',
     }
 }
+//#endregion helpers
 
+//#region services
 export const warehouseService = {
-    async getConfig(request: GetConfigRequest = { Key: WAREHOUSE_CONFIG_KEY }): Promise<WarehouseOperationConfig> {
+    async getConfig(
+        request: GetConfigRequest = {
+            Key: WAREHOUSE_CONFIG_KEY,
+        },
+    ): Promise<WarehouseOperationConfig> {
         const response = await configApiClient.get<GetConfigResponse>(API_ENDPOINTS.config.getConfig, {
-            query: request,
+            query: { ...request },
         })
 
         return parseWarehouseOperationConfig(response)
@@ -40,3 +49,4 @@ export const warehouseService = {
         return response.Result
     },
 }
+//#endregion services

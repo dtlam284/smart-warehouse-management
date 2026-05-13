@@ -1,30 +1,48 @@
 import React from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { LayoutDashboard, LogOut, Menu, Search } from 'lucide-react'
-import { cn } from '@/utils'
-import { useIsMobile } from '@/hooks/useMobile'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageToggle } from '@/components/LanguageToggle'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { useIsMobile } from '@/hooks/useMobile'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { logoutThunk, selectAuthUser } from '@/store/slices/authSlice'
+import { cn } from '@/utils'
 
+//#region constants
 const NAV_ITEMS = [{ name: 'Dashboard', href: '/', icon: LayoutDashboard }]
+//#endregion constants
 
+//#region component
 export function AdminLayout() {
+    //#region hooks
     const dispatch = useAppDispatch()
     const navigate = useNavigate()
-    const location = useLocation()
     const user = useAppSelector(selectAuthUser)
     const isMobile = useIsMobile(1024)
+    //#endregion hooks
+
+    //#region states
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false)
     const sidebarOpen = isMobile ? isMobileSidebarOpen : true
+    //#endregion states
 
+    //#region handlers
     const handleLogout = async () => {
         await dispatch(logoutThunk())
         navigate('/auth/login', { replace: true })
     }
 
+    const closeMobileSidebar = () => {
+        setIsMobileSidebarOpen(false)
+    }
+
+    const openMobileSidebar = () => {
+        setIsMobileSidebarOpen(true)
+    }
+    //#endregion handlers
+
+    //#region render
     return (
         <div className="flex min-h-screen w-full bg-slate-50 font-sans text-slate-900 dark:bg-slate-900 dark:text-slate-100">
             <AnimatePresence>
@@ -33,7 +51,7 @@ export function AdminLayout() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => setIsMobileSidebarOpen(false)}
+                        onClick={closeMobileSidebar}
                         className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm"
                     />
                 )}
@@ -64,6 +82,7 @@ export function AdminLayout() {
                         <NavLink
                             key={item.href}
                             to={item.href}
+                            onClick={closeMobileSidebar}
                             className={({ isActive }) =>
                                 cn(
                                     'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
@@ -130,7 +149,7 @@ export function AdminLayout() {
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
-                            onClick={() => setIsMobileSidebarOpen(true)}
+                            onClick={openMobileSidebar}
                             className="-ml-2 rounded-md p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
                             aria-label="Toggle sidebar"
                         >
@@ -160,4 +179,6 @@ export function AdminLayout() {
             </div>
         </div>
     )
+    //#endregion render
 }
+//#endregion component

@@ -1,21 +1,21 @@
 import React from 'react'
 import { createBrowserRouter } from 'react-router'
-import { ProtectedAdminLayout } from './ProtectedAdminLayout'
-import { AuthFlowGuard } from './AuthFlowGuard'
 import { ErrorBoundaryScreen } from '@/screens/ErrorBoundaryScreen'
-
-// Static imports for critical auth paths (must load immediately)
+import { ActivationScreen } from '@/screens/Auth/ActivationScreen'
+import { ForgotPasswordScreen } from '@/screens/Auth/ForgotPasswordScreen'
 import { LoginScreen } from '@/screens/Auth/LoginScreen'
 import { RegisterScreen } from '@/screens/Auth/RegisterScreen'
-import { ActivationScreen } from '@/screens/Auth/ActivationScreen'
 import { ResetPasswordScreen } from '@/screens/Auth/ResetPasswordScreen'
-import { ForgotPasswordScreen } from '@/screens/Auth/ForgotPasswordScreen'
 import { SessionRequiredScreen } from '@/screens/Auth/SessionRequiredScreen'
 import { NotFoundScreen } from '@/screens/NotFound/NotFoundScreen'
+import { AuthFlowGuard } from './AuthFlowGuard'
+import { ProtectedAdminLayout } from './ProtectedAdminLayout'
 
-// Lazy-loaded screen components for code splitting
+//#region lazy screens
 const DashboardScreen = React.lazy(() =>
-    import('../screens/Dashboard/DashboardScreen').then((m) => ({ default: m.DashboardScreen })),
+    import('../screens/Dashboard/DashboardScreen').then((module) => ({
+        default: module.DashboardScreen,
+    })),
 )
 
 const TenantSelectionScreen = React.lazy(() =>
@@ -35,11 +35,9 @@ const AgentSelectionScreen = React.lazy(() =>
         default: module.AgentSelectionScreen,
     })),
 )
+//#endregion lazy screens
 
-/**
- * Suspense wrapper for lazy-loaded route components.
- * Shows a minimal loading spinner while the chunk downloads.
- */
+//#region route helpers
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
     return (
         <React.Suspense
@@ -54,9 +52,6 @@ function SuspenseRoute({ children }: { children: React.ReactNode }) {
     )
 }
 
-/**
- * Wraps a lazy component in Suspense for use in route config.
- */
 function lazyRoute(LazyComponent: React.LazyExoticComponent<React.ComponentType>) {
     return function LazyRouteWrapper() {
         return (
@@ -66,7 +61,9 @@ function lazyRoute(LazyComponent: React.LazyExoticComponent<React.ComponentType>
         )
     }
 }
+//#endregion route helpers
 
+//#region router
 export const router = createBrowserRouter([
     {
         path: '/auth/login',
@@ -121,8 +118,15 @@ export const router = createBrowserRouter([
         Component: ProtectedAdminLayout,
         ErrorBoundary: ErrorBoundaryScreen,
         children: [
-            { index: true, Component: lazyRoute(DashboardScreen) },
-            { path: '*', Component: NotFoundScreen },
+            {
+                index: true,
+                Component: lazyRoute(DashboardScreen),
+            },
+            {
+                path: '*',
+                Component: NotFoundScreen,
+            },
         ],
     },
 ])
+//#endregion router

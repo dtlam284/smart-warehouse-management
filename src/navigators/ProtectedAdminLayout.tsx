@@ -1,9 +1,10 @@
 import { Navigate, useLocation } from 'react-router'
-import { AdminLayout } from './AdminLayout'
 import { useAppSelector } from '@/store'
 import { selectAuthState } from '@/store/slices/authSlice'
+import { AdminLayout } from './AdminLayout'
 import { appendRedirectParam, createLoginPathWithRedirect } from './redirect'
 
+//#region components
 function AuthCheckingScreen() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
@@ -19,7 +20,9 @@ function AuthCheckingScreen() {
         </div>
     )
 }
+//#endregion components
 
+//#region layout guard
 export function ProtectedAdminLayout() {
     const auth = useAppSelector(selectAuthState)
     const location = useLocation()
@@ -50,3 +53,4 @@ export function ProtectedAdminLayout() {
 
     return <Navigate to="/auth/login" replace />
 }
+//#endregion layout guard

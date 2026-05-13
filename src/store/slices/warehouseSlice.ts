@@ -1,16 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { warehouseService } from '@/services/warehouse/warehouseService'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
+import { toErrorMessage } from './sliceUtils'
 import type { ShippingProvider, WarehouseOperationConfig } from '@/models/warehouse/WarehouseInterface'
 
-const toErrorMessage = (error: unknown, fallback: string): string => {
-    if (error instanceof Error && error.message.trim().length > 0) {
-        return error.message
-    }
-
-    return fallback
-}
-
+//#region states
 export interface IWarehouseState {
     operationConfig: WarehouseOperationConfig | null
     providers: ShippingProvider[]
@@ -28,7 +22,9 @@ const initialState: IWarehouseState = {
     configError: null,
     providersError: null,
 }
+//#endregion states
 
+//#region thunks
 export const loadWarehouseConfig = createAppAsyncThunk(
     'warehouse/loadWarehouseConfig',
     async (_, { rejectWithValue }) => {
@@ -50,7 +46,9 @@ export const loadShippingProviders = createAppAsyncThunk(
         }
     },
 )
+//#endregion thunks
 
+//#region slices
 const warehouseSlice = createSlice({
     name: 'warehouse',
     initialState,
@@ -93,7 +91,13 @@ const warehouseSlice = createSlice({
             })
     },
 })
+//#endregion slices
 
-export const { clearWarehouseErrors, clearWarehouseConfig } = warehouseSlice.actions
+//#region exports
+export const { 
+    clearWarehouseErrors, 
+    clearWarehouseConfig 
+} = warehouseSlice.actions
 
 export default warehouseSlice.reducer
+//#endregion exports

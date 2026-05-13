@@ -3,12 +3,15 @@ import { useAppSelector } from '@/store'
 import { selectAuthStatus } from '@/store/slices/authSlice'
 import { appendRedirectParam, getRedirectParam } from './redirect'
 
+//#region constants
 const AUTH_FLOW_PATH_BY_STATUS = {
     needs_tenant: '/auth/select-tenant',
     needs_role: '/auth/select-role',
     needs_agent: '/auth/select-agent',
 } as const
+//#endregion constants
 
+//#region components
 function AuthFlowCheckingScreen() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-950">
@@ -22,7 +25,9 @@ function AuthFlowCheckingScreen() {
         </div>
     )
 }
+//#endregion components
 
+//#region guard
 export function AuthFlowGuard() {
     const status = useAppSelector(selectAuthStatus)
     const location = useLocation()
@@ -47,3 +52,4 @@ export function AuthFlowGuard() {
 
     return <Outlet />
 }
+//#endregion guard

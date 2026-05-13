@@ -61,7 +61,7 @@ export interface IAuthState {
 export type AuthState = IAuthState
 //#endregion types
 
-//#region state
+//#region states
 const initialState: IAuthState = {
     user: null,
     tenants: [],
@@ -77,7 +77,7 @@ const initialState: IAuthState = {
     error: null,
     errorCode: null,
 }
-//#endregion state
+//#endregion states
 
 //#region constants
 export const ACCOUNT_NOT_ACTIVATED_CODE = 'ACCOUNT_NOT_ACTIVATED'
