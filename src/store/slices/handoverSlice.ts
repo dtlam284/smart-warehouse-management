@@ -3,27 +3,27 @@ import { handoverService } from '@/services/handover/handoverService'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
 import { toErrorMessage } from './sliceUtils'
 import type {
-    GetHandoverListRequest,
-    GetHandoverStatsRequest,
-    RemoveHandoverRequest,
-    UpdateHandoverRequest,
+    IGetHandoverListRequest,
+    IGetHandoverStatsRequest,
+    IRemoveHandoverRequest,
+    IUpdateHandoverRequest,
 } from '@/models/handover/HandoverDTO'
 import type {
-    HandoverFilters,
-    HandoverRecord,
-    HandoverStats,
+    IHandoverFilters,
+    IHandoverRecord,
+    IHandoverStats,
 } from '@/models/handover/HandoverInterface'
 
 //#region helpers
-function hasShippingUnitId(request: Pick<UpdateHandoverRequest, 'ShippingUnitId'>): boolean {
+function hasShippingUnitId(request: Pick<IUpdateHandoverRequest, 'ShippingUnitId'>): boolean {
     return request.ShippingUnitId.trim().length > 0
 }
 
-function getDeliveryCodesFromRecords(records: HandoverRecord[]): string[] {
+function getDeliveryCodesFromRecords(records: IHandoverRecord[]): string[] {
     return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
 }
 
-function prependHandoverRecords(currentRecords: HandoverRecord[], newRecords: HandoverRecord[]): HandoverRecord[] {
+function prependHandoverRecords(currentRecords: IHandoverRecord[], newRecords: IHandoverRecord[]): IHandoverRecord[] {
     const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
     const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
 
@@ -32,16 +32,16 @@ function prependHandoverRecords(currentRecords: HandoverRecord[], newRecords: Ha
 //#endregion helpers
 
 //#region states
-const defaultFilters: HandoverFilters = {
+const defaultFilters: IHandoverFilters = {
     PageIndex: 0,
     PageSize: 20,
 }
 
 export interface IHandoverState {
-    records: HandoverRecord[]
+    records: IHandoverRecord[]
     totalRows: number
-    filters: HandoverFilters
-    handoverStats: HandoverStats | null
+    filters: IHandoverFilters
+    handoverStats: IHandoverStats | null
     isFetchingList: boolean
     isLoadingStats: boolean
     isUpdating: boolean
@@ -65,7 +65,7 @@ const initialState: IHandoverState = {
 //#region thunks
 export const addHandoverRecord = createAppAsyncThunk(
     'handover/addHandoverRecord',
-    async (request: UpdateHandoverRequest, { rejectWithValue }) => {
+    async (request: IUpdateHandoverRequest, { rejectWithValue }) => {
         if (!hasShippingUnitId(request)) {
             return rejectWithValue('Please select a shipping unit before delivery. (Vui lòng chọn đơn vị vận chuyển trước khi bàn giao.)')
         }
@@ -80,7 +80,7 @@ export const addHandoverRecord = createAppAsyncThunk(
 
 export const removeHandoverRecord = createAppAsyncThunk(
     'handover/removeHandoverRecord',
-    async (request: RemoveHandoverRequest, { rejectWithValue }) => {
+    async (request: IRemoveHandoverRequest, { rejectWithValue }) => {
         if (!hasShippingUnitId(request)) {
             return rejectWithValue('Please select a shipping unit before deleting the handover. (Vui lòng chọn đơn vị vận chuyển trước khi xóa bàn giao.)')
         }
@@ -95,7 +95,7 @@ export const removeHandoverRecord = createAppAsyncThunk(
 
 export const fetchHandoverList = createAppAsyncThunk(
     'handover/fetchHandoverList',
-    async (request: GetHandoverListRequest, { rejectWithValue }) => {
+    async (request: IGetHandoverListRequest, { rejectWithValue }) => {
         try {
             return await handoverService.getHandoverList(request)
         } catch (error) {
@@ -106,7 +106,7 @@ export const fetchHandoverList = createAppAsyncThunk(
 
 export const loadHandoverStats = createAppAsyncThunk(
     'handover/loadHandoverStats',
-    async (request: GetHandoverStatsRequest | undefined, { rejectWithValue }) => {
+    async (request: IGetHandoverStatsRequest | undefined, { rejectWithValue }) => {
         try {
             return await handoverService.getHandoverStats(request)
         } catch (error) {
@@ -131,7 +131,7 @@ const handoverSlice = createSlice({
             state.error = null
         },
 
-        setHandoverFilters(state, action: PayloadAction<Partial<HandoverFilters>>) {
+        setHandoverFilters(state, action: PayloadAction<Partial<IHandoverFilters>>) {
             state.filters = {
                 ...state.filters,
                 ...action.payload,

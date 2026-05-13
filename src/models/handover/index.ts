@@ -1,14 +1,14 @@
 export type {
-    HandoverFilters,
-    HandoverListResult,
-    HandoverRecord,
-    HandoverStats,
-    ProviderProgress,
+    IHandoverFilters,
+    IHandoverListResult,
+    IHandoverRecord,
+    IHandoverStats,
+    IProviderProgress,
 } from './HandoverInterface'
 
 export type {
-    GetHandoverListRequest,
-    GetHandoverStatsRequest,
-    RemoveHandoverRequest,
-    UpdateHandoverRequest,
+    IGetHandoverListRequest,
+    IGetHandoverStatsRequest,
+    IRemoveHandoverRequest,
+    IUpdateHandoverRequest,
 } from './HandoverDTO'

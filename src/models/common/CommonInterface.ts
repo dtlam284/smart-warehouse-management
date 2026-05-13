@@ -5,20 +5,20 @@ export type ScanInputType = 'DELIVERYCODE' | 'PACKAGECODE' | 'ORDERCODEREF' | 'O
 
 export type WorkMode = 'PACKING' | 'HANDOVER' | 'RETURN_DELIVERY' | 'NONE'
 
-export interface DataResponse<TData> {
+export interface IDataResponse<TData> {
     Code: number
     Message: string
     Data:TData
 }
 
-export interface PaginatedResponse<TData> {
+export interface IPaginatedResponse<TData> {
     Data: TData[]
     TotalRows: number
     PageIndex: number
     PageSize: number
 }
 
-export interface ScanCodePayload {
+export interface IScanCodePayload {
     DeliveryCode?: string
     OrderCode?: string
     OrderCodeRef?: string
@@ -26,7 +26,7 @@ export interface ScanCodePayload {
     Type:ScanInputType
 }
 
-export function buildScanPayload(code: string, type: ScanInputType): ScanCodePayload {
+export function buildScanPayload(code: string, type: ScanInputType): IScanCodePayload {
     switch (type) {
         case 'DELIVERYCODE':
             return {

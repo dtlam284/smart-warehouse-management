@@ -1,18 +1,18 @@
 import type { ISODateString } from '../common/CommonInterface'
 
-export interface PackingProduct {
+export interface IPackingProduct {
     GroupServiceName: string | null
     ListingPropertyCode: string
     Quantity: number
 }
 
-export interface PackingDetail {
+export interface IPackingDetail {
     Name: string
     Code: string
-    PackageDetails: PackingProduct[]
+    PackageDetails: IPackingProduct[]
 }
 
-export interface PackingRecord {
+export interface IPackingRecord {
     Id: string
     OrderCode: string
     DeliveryCode: string
@@ -23,7 +23,7 @@ export interface PackingRecord {
     TotalRows: number
 }
 
-export interface PackingFilters {
+export interface IPackingFilters {
     PageIndex: number
     PageSize: number
     Date?: string
@@ -33,15 +33,15 @@ export interface PackingFilters {
     OrderCodeRef?: string
 }
 
-export interface PackingStats {
+export interface IPackingStats {
     FromDate: string
     ToDate: string
     TotalPacking: number
     TotalSalesOrder: number
 }
 
-export interface PackingListResult {
-    Data: PackingRecord[]
+export interface IPackingListResult {
+    Data: IPackingRecord[]
     TotalRows: number
     PageIndex: number
     PageSize: number

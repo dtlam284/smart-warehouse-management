@@ -1,6 +1,6 @@
 import type { ISODateString } from '@/models/common/CommonInterface'
 
-export interface HandoverRecord {
+export interface IHandoverRecord {
     Id?: string
     OrderCode: string
     DeliveryCode: string
@@ -14,14 +14,14 @@ export interface HandoverRecord {
     TotalRows: number
 }
 
-export interface ProviderProgress {
+export interface IProviderProgress {
     Name: string
     ShippingUnitId: string
     TotalHandover: number
     TotalSalesOrder: number
 }
 
-export interface HandoverFilters {
+export interface IHandoverFilters {
     PageIndex: number
     PageSize: number
     Date?: string
@@ -32,14 +32,14 @@ export interface HandoverFilters {
     ShippingUnitId?: string
 }
 
-export interface HandoverStats {
+export interface IHandoverStats {
     FromDate: string
     ToDate: string
-    Statistics: ProviderProgress[]
+    Statistics: IProviderProgress[]
 }
 
-export interface HandoverListResult {
-    Data: HandoverRecord[]
+export interface IHandoverListResult {
+    Data: IHandoverRecord[]
     TotalRows: number
     PageIndex: number
     PageSize: number

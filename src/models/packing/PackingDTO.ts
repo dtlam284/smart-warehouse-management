@@ -1,6 +1,6 @@
 import type { ScanInputType } from '../common/CommonInterface'
 
-export interface GetPackageDetailsRequest {
+export interface IGetPackageDetailsRequest {
     DeliveryCode?: string
     OrderCode?: string
     OrderCodeRef?: string
@@ -9,7 +9,7 @@ export interface GetPackageDetailsRequest {
     SkippingUnitId?: string
 }
 
-export interface UpdatePackingRequest {
+export interface IUpdatePackingRequest {
     DeliveryCodes?: string[]
     OrderCode?: string
     OrderCodeRef?: string
@@ -17,7 +17,7 @@ export interface UpdatePackingRequest {
     Type: ScanInputType
 }
 
-export interface RemovePackingRequest {
+export interface IRemovePackingRequest {
     DeliveryCode?: string
     OrderCode?: string
     OrderCodeRef?: string
@@ -26,7 +26,7 @@ export interface RemovePackingRequest {
     ShippingUnitId: string
 }
 
-export interface GetPackingListRequest {
+export interface IGetPackingListRequest {
     PageIndex: number
     PageSize: number
     Date?: string
@@ -37,6 +37,6 @@ export interface GetPackingListRequest {
     ShippingUnitId?: string
 }
 
-export interface GetPackingStatsRequest {
+export interface IGetPackingStatsRequest {
     Date?: string
 }

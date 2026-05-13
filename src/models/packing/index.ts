@@ -1,16 +1,16 @@
 export type {
-    PackingDetail,
-    PackingFilters,
-    PackingListResult,
-    PackingProduct,
-    PackingRecord,
-    PackingStats,
+    IPackingDetail,
+    IPackingFilters,
+    IPackingListResult,
+    IPackingProduct,
+    IPackingRecord,
+    IPackingStats,
 } from './PackingInterface'
 
 export type {
-    GetPackageDetailsRequest,
-    GetPackingListRequest,
-    GetPackingStatsRequest,
-    RemovePackingRequest,
-    UpdatePackingRequest,
+    IGetPackageDetailsRequest,
+    IGetPackingListRequest,
+    IGetPackingStatsRequest,
+    IRemovePackingRequest,
+    IUpdatePackingRequest,
 } from './PackingDTO'

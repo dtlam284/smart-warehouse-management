@@ -1,18 +1,18 @@
 import { API_ENDPOINTS } from '@/constants/api'
 import { apiClient } from '@/services/core'
 import type { 
-    PaginatedResponse 
+    IPaginatedResponse 
 } from '@/models/common/CommonInterface'
 import type {
-    GetHandoverListRequest,
-    GetHandoverStatsRequest,
-    RemoveHandoverRequest,
-    UpdateHandoverRequest,
+    IGetHandoverListRequest,
+    IGetHandoverStatsRequest,
+    IRemoveHandoverRequest,
+    IUpdateHandoverRequest,
 } from '@/models/handover/HandoverDTO'
 import type {
-    HandoverListResult,
-    HandoverRecord,
-    HandoverStats,
+    IHandoverListResult,
+    IHandoverRecord,
+    IHandoverStats,
 } from '@/models/handover/HandoverInterface'
 
 //#region backend DTOs
@@ -31,12 +31,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null
 }
 
-function normalizeHandoverRecords(response: HandoverRecord[] | unknown): HandoverRecord[] {
+function normalizeHandoverRecords(response: IHandoverRecord[] | unknown): IHandoverRecord[] {
     if (!Array.isArray(response)) {
         return []
     }
 
-    return response.filter((item): item is HandoverRecord => {
+    return response.filter((item): item is IHandoverRecord => {
         return isRecord(item) && typeof item.DeliveryCode === 'string'
     })
 }
@@ -50,9 +50,9 @@ function normalizeRemoveHandoverResponse(response: string[] | unknown): string[]
 }
 
 function normalizeHandoverListResponse(
-    response: PaginatedResponse<HandoverRecord> | BackendPaginationResponse<HandoverRecord> | HandoverRecord[],
-    fallbackRequest: GetHandoverListRequest,
-): HandoverListResult {
+    response: IPaginatedResponse<IHandoverRecord> | BackendPaginationResponse<IHandoverRecord> | IHandoverRecord[],
+    fallbackRequest: IGetHandoverListRequest,
+): IHandoverListResult {
     if (Array.isArray(response)) {
         return {
             Data: response,
@@ -91,8 +91,8 @@ function normalizeHandoverListResponse(
 
 //#region services
 export const handoverService = {
-    async addHandoverRecord(request: UpdateHandoverRequest): Promise<HandoverRecord[]> {
-        const response = await apiClient.put<HandoverRecord[] | unknown>(
+    async addHandoverRecord(request: IUpdateHandoverRequest): Promise<IHandoverRecord[]> {
+        const response = await apiClient.put<IHandoverRecord[] | unknown>(
             API_ENDPOINTS.handover.updateHandover,
             request,
         )
@@ -100,7 +100,7 @@ export const handoverService = {
         return normalizeHandoverRecords(response)
     },
 
-    async removeHandoverRecord(request: RemoveHandoverRequest): Promise<string[]> {
+    async removeHandoverRecord(request: IRemoveHandoverRequest): Promise<string[]> {
         const response = await apiClient.post<string[] | unknown>(
             API_ENDPOINTS.handover.removeHandover,
             request,
@@ -109,9 +109,9 @@ export const handoverService = {
         return normalizeRemoveHandoverResponse(response)
     },
 
-    async getHandoverList(request: GetHandoverListRequest): Promise<HandoverListResult> {
+    async getHandoverList(request: IGetHandoverListRequest): Promise<IHandoverListResult> {
         const response = await apiClient.get<
-            PaginatedResponse<HandoverRecord> | BackendPaginationResponse<HandoverRecord> | HandoverRecord[]
+            IPaginatedResponse<IHandoverRecord> | BackendPaginationResponse<IHandoverRecord> | IHandoverRecord[]
         >(API_ENDPOINTS.handover.handoverList, {
             query: { ...request },
         })
@@ -119,8 +119,8 @@ export const handoverService = {
         return normalizeHandoverListResponse(response, request)
     },
 
-    getHandoverStats(request: GetHandoverStatsRequest = {}): Promise<HandoverStats> {
-        return apiClient.get<HandoverStats>(API_ENDPOINTS.handover.statistics, {
+    getHandoverStats(request: IGetHandoverStatsRequest = {}): Promise<IHandoverStats> {
+        return apiClient.get<IHandoverStats>(API_ENDPOINTS.handover.statistics, {
             query: { ...request },
         })
     },

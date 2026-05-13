@@ -1,6 +1,6 @@
 import type { 
-    HandoverRecord, 
-    ProviderProgress 
+    IHandoverRecord, 
+    IProviderProgress 
 } from '@/models/handover/HandoverInterface'
 import type { RootState } from '@/store/store'
 
@@ -33,7 +33,7 @@ export const selectHandoverError = (state: RootState) => state.handover.error
 //#region record lookup selectors
 export const selectHandoverRecordByDeliveryCode =
     (deliveryCode: string) =>
-    (state: RootState): HandoverRecord | undefined => {
+    (state: RootState): IHandoverRecord | undefined => {
         return state.handover.records.find((record) => record.DeliveryCode === deliveryCode)
     }
 
@@ -45,13 +45,13 @@ export const selectHasHandoverRecordByDeliveryCode =
 //#endregion record lookup selectors
 
 //#region provider progress selectors
-export const selectProviderProgressList = (state: RootState): ProviderProgress[] => {
+export const selectProviderProgressList = (state: RootState): IProviderProgress[] => {
     return state.handover.handoverStats?.Statistics ?? []
 }
 
 export const selectProviderProgressByShippingUnitId =
     (shippingUnitId: string) =>
-    (state: RootState): ProviderProgress | undefined => {
+    (state: RootState): IProviderProgress | undefined => {
         return state.handover.handoverStats?.Statistics.find(
             (progress) => progress.ShippingUnitId === shippingUnitId,
         )

@@ -1,6 +1,6 @@
 import type { ScanInputType } from '@/models/common/CommonInterface'
 
-export interface UpdateHandoverRequest {
+export interface IUpdateHandoverRequest {
     ShippingUnitId: string
     DeliveryCodes?: string[]
     OrderCode?: string
@@ -9,7 +9,7 @@ export interface UpdateHandoverRequest {
     Type: ScanInputType
 }
 
-export interface RemoveHandoverRequest {
+export interface IRemoveHandoverRequest {
     ShippingUnitId: string
     DeliveryCodes?: string[]
     OrderCode?: string
@@ -18,7 +18,7 @@ export interface RemoveHandoverRequest {
     Type: ScanInputType
 }
 
-export interface GetHandoverListRequest {
+export interface IGetHandoverListRequest {
     PageIndex: number
     PageSize: number
     Date?: string
@@ -29,6 +29,6 @@ export interface GetHandoverListRequest {
     ShippingUnitId?: string
 }
 
-export interface GetHandoverStatsRequest {
+export interface IGetHandoverStatsRequest {
     Date?: string
 }

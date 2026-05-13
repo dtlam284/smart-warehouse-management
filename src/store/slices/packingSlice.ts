@@ -3,21 +3,21 @@ import { packingService } from '@/services/packing/packingService'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
 import { toErrorMessage } from './sliceUtils'
 import type {
-    GetPackageDetailsRequest,
-    GetPackingListRequest,
-    GetPackingStatsRequest,
-    RemovePackingRequest,
-    UpdatePackingRequest,
+    IGetPackageDetailsRequest,
+    IGetPackingListRequest,
+    IGetPackingStatsRequest,
+    IRemovePackingRequest,
+    IUpdatePackingRequest,
 } from '@/models/packing/PackingDTO'
 import type {
-    PackingDetail,
-    PackingFilters,
-    PackingRecord,
-    PackingStats,
+    IPackingDetail,
+    IPackingFilters,
+    IPackingRecord,
+    IPackingStats,
 } from '@/models/packing/PackingInterface'
 
 //#region helpers
-function isAllItemsHandled(activeDetail: PackingDetail | null, scannedSKUs: Record<string, number>): boolean {
+function isAllItemsHandled(activeDetail: IPackingDetail | null, scannedSKUs: Record<string, number>): boolean {
     if (!activeDetail || activeDetail.PackageDetails.length === 0) {
         return false
     }
@@ -29,11 +29,11 @@ function isAllItemsHandled(activeDetail: PackingDetail | null, scannedSKUs: Reco
     })
 }
 
-function getDeliveryCodesFromRecords(records: PackingRecord[]): string[] {
+function getDeliveryCodesFromRecords(records: IPackingRecord[]): string[] {
     return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
 }
 
-function prependPackingRecords(currentRecords: PackingRecord[], newRecords: PackingRecord[]): PackingRecord[] {
+function prependPackingRecords(currentRecords: IPackingRecord[], newRecords: IPackingRecord[]): IPackingRecord[] {
     const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
     const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
 
@@ -42,18 +42,18 @@ function prependPackingRecords(currentRecords: PackingRecord[], newRecords: Pack
 //#endregion helpers
 
 //#region states
-const defaultFilters: PackingFilters = {
+const defaultFilters: IPackingFilters = {
     PageIndex: 0,
     PageSize: 20,
 }
 
 export interface IPackingState {
-    activeDetail: PackingDetail | null
+    activeDetail: IPackingDetail | null
     scannedSKUs: Record<string, number>
-    processedList: PackingRecord[]
+    processedList: IPackingRecord[]
     totalRows: number
-    filters: PackingFilters
-    packingStats: PackingStats | null
+    filters: IPackingFilters
+    packingStats: IPackingStats | null
     isLoadingDetail: boolean
     isFetchingList: boolean
     isLoadingStats: boolean
@@ -81,7 +81,7 @@ const initialState: IPackingState = {
 //#region thunks
 export const loadPackageDetails = createAppAsyncThunk(
     'packing/loadPackageDetails',
-    async (request: GetPackageDetailsRequest, { rejectWithValue }) => {
+    async (request: IGetPackageDetailsRequest, { rejectWithValue }) => {
         try {
             return await packingService.getPackageDetails(request)
         } catch (error) {
@@ -92,7 +92,7 @@ export const loadPackageDetails = createAppAsyncThunk(
 
 export const completePacking = createAppAsyncThunk(
     'packing/completePacking',
-    async (request: UpdatePackingRequest, { getState, rejectWithValue }) => {
+    async (request: IUpdatePackingRequest, { getState, rejectWithValue }) => {
         const state = getState()
         const { activeDetail, scannedSKUs } = state.packing
 
@@ -110,7 +110,7 @@ export const completePacking = createAppAsyncThunk(
 
 export const cancelPacking = createAppAsyncThunk(
     'packing/cancelPacking',
-    async (request: RemovePackingRequest, { rejectWithValue }) => {
+    async (request: IRemovePackingRequest, { rejectWithValue }) => {
         try {
             return await packingService.cancelPacking(request)
         } catch (error) {
@@ -121,7 +121,7 @@ export const cancelPacking = createAppAsyncThunk(
 
 export const fetchPackingList = createAppAsyncThunk(
     'packing/fetchPackingList',
-    async (request: GetPackingListRequest, { rejectWithValue }) => {
+    async (request: IGetPackingListRequest, { rejectWithValue }) => {
         try {
             return await packingService.getPackingList(request)
         } catch (error) {
@@ -132,7 +132,7 @@ export const fetchPackingList = createAppAsyncThunk(
 
 export const loadPackingStats = createAppAsyncThunk(
     'packing/loadPackingStats',
-    async (request: GetPackingStatsRequest | undefined, { rejectWithValue }) => {
+    async (request: IGetPackingStatsRequest | undefined, { rejectWithValue }) => {
         try {
             return await packingService.getPackingStats(request)
         } catch (error) {
@@ -183,7 +183,7 @@ const packingSlice = createSlice({
             state.scannedSKUs = {}
         },
 
-        setPackingFilters(state, action: PayloadAction<Partial<PackingFilters>>) {
+        setPackingFilters(state, action: PayloadAction<Partial<IPackingFilters>>) {
             state.filters = {
                 ...state.filters,
                 ...action.payload,

@@ -1,23 +1,23 @@
 import { API_ENDPOINTS } from '@/constants/api'
 import { apiClient } from '@/services/core'
 import type { 
-    PaginatedResponse 
+    IPaginatedResponse 
 } from '@/models/common/CommonInterface'
 import type {
-    GetPackageDetailsRequest,
-    GetPackingListRequest,
-    GetPackingStatsRequest,
-    RemovePackingRequest,
-    UpdatePackingRequest,
+    IGetPackageDetailsRequest,
+    IGetPackingListRequest,
+    IGetPackingStatsRequest,
+    IRemovePackingRequest,
+    IUpdatePackingRequest,
 } from '@/models/packing/PackingDTO'
 import type { 
-    PackingDetail, 
-    PackingListResult, 
-    PackingRecord,
-    PackingStats } from '@/models/packing/PackingInterface'
+    IPackingDetail, 
+    IPackingListResult, 
+    IPackingRecord,
+    IPackingStats } from '@/models/packing/PackingInterface'
 
 //#region backend DTOs
-interface BackendPaginationResponse<TItem> {
+interface IBackendPaginationResponse<TItem> {
     Items?: TItem[]
     Data?: TItem[]
     TotalRows?: number
@@ -33,9 +33,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizePackingListResponse(
-    response: PaginatedResponse<PackingRecord> | BackendPaginationResponse<PackingRecord> | PackingRecord[],
-    fallbackRequest: GetPackingListRequest,
-): PackingListResult {
+    response: IPaginatedResponse<IPackingRecord> | IBackendPaginationResponse<IPackingRecord> | IPackingRecord[],
+    fallbackRequest: IGetPackingListRequest,
+): IPackingListResult {
     if (Array.isArray(response)) {
         return {
             Data: response,
@@ -79,12 +79,12 @@ function normalizeRemovePackingResponse(response: string[] | unknown): string[] 
     return []
 }
 
-function normalizePackingRecords(response: PackingRecord[] | unknown): PackingRecord[] {
+function normalizePackingRecords(response: IPackingRecord[] | unknown): IPackingRecord[] {
     if (!Array.isArray(response)) {
         return []
     }
 
-    return response.filter((item): item is PackingRecord => {
+    return response.filter((item): item is IPackingRecord => {
         return isRecord(item) && typeof item.DeliveryCode === 'string'
     })
 }
@@ -92,27 +92,27 @@ function normalizePackingRecords(response: PackingRecord[] | unknown): PackingRe
 
 //#region services
 export const packingService = {
-    getPackageDetails(request: GetPackageDetailsRequest): Promise<PackingDetail> {
-        return apiClient.get<PackingDetail>(API_ENDPOINTS.packing.getPackageDetails, {
+    getPackageDetails(request: IGetPackageDetailsRequest): Promise<IPackingDetail> {
+        return apiClient.get<IPackingDetail>(API_ENDPOINTS.packing.getPackageDetails, {
             query: { ...request },
         })
     },
 
-    async completePacking(request: UpdatePackingRequest): Promise<PackingRecord[]> {
-        const response = await apiClient.put<PackingRecord[] | unknown>(API_ENDPOINTS.packing.updatePacking, request)
+    async completePacking(request: IUpdatePackingRequest): Promise<IPackingRecord[]> {
+        const response = await apiClient.put<IPackingRecord[] | unknown>(API_ENDPOINTS.packing.updatePacking, request)
 
         return normalizePackingRecords(response)
     },
 
-    async cancelPacking(request: RemovePackingRequest): Promise<string[]> {
+    async cancelPacking(request: IRemovePackingRequest): Promise<string[]> {
         const response = await apiClient.post<string[] | unknown>(API_ENDPOINTS.packing.removePacking, request)
 
         return normalizeRemovePackingResponse(response)
     },
 
-    async getPackingList(request: GetPackingListRequest): Promise<PackingListResult> {
+    async getPackingList(request: IGetPackingListRequest): Promise<IPackingListResult> {
         const response = await apiClient.get<
-            PaginatedResponse<PackingRecord> | BackendPaginationResponse<PackingRecord> | PackingRecord[]
+            IPaginatedResponse<IPackingRecord> | IBackendPaginationResponse<IPackingRecord> | IPackingRecord[]
         >(API_ENDPOINTS.packing.packingList, {
             query: { ...request },
         })
@@ -120,8 +120,8 @@ export const packingService = {
         return normalizePackingListResponse(response, request)
     },
 
-    getPackingStats(request: GetPackingStatsRequest = {}): Promise<PackingStats> {
-        return apiClient.get<PackingStats>(API_ENDPOINTS.packing.statistics, {
+    getPackingStats(request: IGetPackingStatsRequest = {}): Promise<IPackingStats> {
+        return apiClient.get<IPackingStats>(API_ENDPOINTS.packing.statistics, {
             query: { ...request },
         })
     },
