@@ -3,9 +3,10 @@ import { persistReducer, persistStore } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 import appReducer from './slices/appSlice'
 import authReducer from './slices/authSlice'
+import warehouseReducer from './slices/warehouseSlice'
 
 const persistConfig = {
-    key: 'cms',
+    key: 'wh-packaging-root',
     storage,
     whitelist: ['auth', 'app'],
 }
@@ -13,6 +14,7 @@ const persistConfig = {
 const rootReducer = combineReducers({
     app: appReducer,
     auth: authReducer,
+    warehouse: warehouseReducer,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
