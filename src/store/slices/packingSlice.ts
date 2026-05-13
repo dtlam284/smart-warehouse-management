@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { packingService } from '@/services/packing/packingService'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
+import { toErrorMessage } from './sliceUtils'
 import type {
     GetPackageDetailsRequest,
     GetPackingListRequest,
@@ -15,14 +16,32 @@ import type {
     PackingStats,
 } from '@/models/packing/PackingInterface'
 
-const toErrorMessage = (error: unknown, fallback: string): string => {
-    if (error instanceof Error && error.message.trim().length > 0) {
-        return error.message
+//#region helpers
+function isAllItemsHandled(activeDetail: PackingDetail | null, scannedSKUs: Record<string, number>): boolean {
+    if (!activeDetail || activeDetail.PackageDetails.length === 0) {
+        return false
     }
 
-    return fallback
+    return activeDetail.PackageDetails.every((item) => {
+        const scannedCount = scannedSKUs[item.ListingPropertyCode] ?? 0
+
+        return scannedCount >= item.Quantity
+    })
 }
 
+function getDeliveryCodesFromRecords(records: PackingRecord[]): string[] {
+    return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
+}
+
+function prependPackingRecords(currentRecords: PackingRecord[], newRecords: PackingRecord[]): PackingRecord[] {
+    const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
+    const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
+
+    return [...newRecords, ...filteredCurrentRecords]
+}
+//#endregion helpers
+
+//#region states
 const defaultFilters: PackingFilters = {
     PageIndex: 0,
     PageSize: 20,
@@ -57,30 +76,9 @@ const initialState: IPackingState = {
     isRemoving: false,
     error: null,
 }
+//#endregion states
 
-function isAllItemsHandled(activeDetail: PackingDetail | null, scannedSKUs: Record<string, number>): boolean {
-    if (!activeDetail || activeDetail.PackageDetails.length === 0) {
-        return false
-    }
-
-    return activeDetail.PackageDetails.every((item) => {
-        const scannedCount = scannedSKUs[item.ListingPropertyCode] ?? 0
-
-        return scannedCount >= item.Quantity
-    })
-}
-
-function getDeliveryCodesFromRecords(records: PackingRecord[]): string[] {
-    return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
-}
-
-function prependPackingRecords(currentRecords: PackingRecord[], newRecords: PackingRecord[]): PackingRecord[] {
-    const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
-    const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
-
-    return [...newRecords, ...filteredCurrentRecords]
-}
-
+//#region thunks
 export const loadPackageDetails = createAppAsyncThunk(
     'packing/loadPackageDetails',
     async (request: GetPackageDetailsRequest, { rejectWithValue }) => {
@@ -99,13 +97,13 @@ export const completePacking = createAppAsyncThunk(
         const { activeDetail, scannedSKUs } = state.packing
 
         if (!isAllItemsHandled(activeDetail, scannedSKUs)) {
-            return rejectWithValue('Chưa quét đủ số lượng SKU để hoàn thành đóng gói')
+            return rejectWithValue('Not enough SKUs have been scanned to complete packaging. (Chưa quét đủ số lượng SKU để hoàn thành đóng gói.)')
         }
 
         try {
             return await packingService.completePacking(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Không thể hoàn thành đóng gói'))
+            return rejectWithValue(toErrorMessage(error, 'Unable to complete packing. (Không thể hoàn thành đóng gói.)'))
         }
     },
 )
@@ -116,7 +114,7 @@ export const cancelPacking = createAppAsyncThunk(
         try {
             return await packingService.cancelPacking(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Không thể xóa record đóng gói'))
+            return rejectWithValue(toErrorMessage(error, 'Unable to delete packing record. (Không thể xóa record đóng gói.)'))
         }
     },
 )
@@ -127,7 +125,7 @@ export const fetchPackingList = createAppAsyncThunk(
         try {
             return await packingService.getPackingList(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Không thể tải danh sách kiện đã đóng'))
+            return rejectWithValue(toErrorMessage(error, 'Unable to load packing list. (Không thể tải danh sách kiện đã đóng.)'))
         }
     },
 )
@@ -138,11 +136,13 @@ export const loadPackingStats = createAppAsyncThunk(
         try {
             return await packingService.getPackingStats(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Không thể tải thống kê đóng gói'))
+            return rejectWithValue(toErrorMessage(error, 'Unable to load packing statistics. (Không thể tải thống kê đóng gói.)'))
         }
     },
 )
+//#endregion thunks
 
+//#region slices
 const packingSlice = createSlice({
     name: 'packing',
     initialState,
@@ -276,7 +276,9 @@ const packingSlice = createSlice({
             })
     },
 })
+//#endregion slices
 
+//#region exports
 export const {
     clearActivePackingDetail,
     clearPackingError,
@@ -287,3 +289,4 @@ export const {
 } = packingSlice.actions
 
 export default packingSlice.reducer
+//#endregion exports

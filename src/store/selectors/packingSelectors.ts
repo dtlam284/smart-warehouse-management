@@ -1,12 +1,15 @@
 import type { RootState } from '@/store/store'
 
+//#region types
 export type SKUStatus = 'complete' | 'partial' | 'pending'
 
 export interface ScannedProgress {
     scanned: number
     total: number
 }
+//#endregion types
 
+//#region base selectors
 export const selectPackingState = (state: RootState) => state.packing
 
 export const selectPackingActiveDetail = (state: RootState) => state.packing.activeDetail
@@ -20,7 +23,9 @@ export const selectPackingTotalRows = (state: RootState) => state.packing.totalR
 export const selectPackingFilters = (state: RootState) => state.packing.filters
 
 export const selectPackingStats = (state: RootState) => state.packing.packingStats
+//#endregion base selectors
 
+//#region loading selectors
 export const selectIsLoadingPackageDetails = (state: RootState) => state.packing.isLoadingDetail
 
 export const selectIsFetchingPackingList = (state: RootState) => state.packing.isFetchingList
@@ -28,9 +33,13 @@ export const selectIsFetchingPackingList = (state: RootState) => state.packing.i
 export const selectIsUpdatingPacking = (state: RootState) => state.packing.isUpdating
 
 export const selectIsRemovingPacking = (state: RootState) => state.packing.isRemoving
+//#endregion loading selectors
 
+//#region error selectors
 export const selectPackingError = (state: RootState) => state.packing.error
+//#endregion error selectors
 
+//#region packing progress selectors
 export const selectIsAllItemsHandled = (state: RootState): boolean => {
     const { activeDetail, scannedSKUs } = state.packing
 
@@ -70,7 +79,9 @@ export const selectScannedProgress = (state: RootState): ScannedProgress => {
         },
     )
 }
+//#endregion packing progress selectors
 
+//#region SKU status selectors
 export const selectSKUStatus =
     (sku: string) =>
     (state: RootState): SKUStatus => {
@@ -130,4 +141,4 @@ export const selectIsSKUInActiveDetail =
 
         return activeDetail.PackageDetails.some((item) => item.ListingPropertyCode === sku)
     }
-    
+//#endregion SKU status selectors

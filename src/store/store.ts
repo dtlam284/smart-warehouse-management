@@ -5,7 +5,9 @@ import appReducer from './slices/appSlice'
 import authReducer from './slices/authSlice'
 import warehouseReducer from './slices/warehouseSlice'
 import packingReducer from './slices/packingSlice'
+import handoverReducer from './slices/handoverSlice'
 
+//#region config & root reducer
 const persistConfig = {
     key: 'wh-packaging-root',
     storage,
@@ -17,6 +19,7 @@ const rootReducer = combineReducers({
     auth: authReducer,
     warehouse: warehouseReducer,
     packing: packingReducer,
+    handover: handoverReducer,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
@@ -38,8 +41,10 @@ export const store = configureStore({
         }),
     devTools: import.meta.env.DEV,
 })
+//#endregion config & root reducer
 
+//#region exports
 export const persistor = persistStore(store)
-
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
+//#endregion exports

@@ -96,6 +96,7 @@ export const API_ENDPOINTS = {
         updateHandover: 'api/v2/orders/delivery-handover',
         removeHandover: 'api/v2/orders/remove-handover',
         handoverList: 'api/v2/orders/get-by-page-handover',
+        handoverListSimple: 'api/v2/orders/get-list-handover',
         statistics: 'api/v2/orders/get-order-handover-statistics',
     },
     //#endregion handover

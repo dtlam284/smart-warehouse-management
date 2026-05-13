@@ -16,6 +16,7 @@ import type {
     PackingRecord,
     PackingStats } from '@/models/packing/PackingInterface'
 
+//#region backend DTOs
 interface BackendPaginationResponse<TItem> {
     Items?: TItem[]
     Data?: TItem[]
@@ -24,7 +25,9 @@ interface BackendPaginationResponse<TItem> {
     PageIndex?: number
     PageSize?: number
 }
+//#endregion backend DTOs
 
+//#region helpers
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null
 }
@@ -85,7 +88,9 @@ function normalizePackingRecords(response: PackingRecord[] | unknown): PackingRe
         return isRecord(item) && typeof item.DeliveryCode === 'string'
     })
 }
+//#endregion helpers
 
+//#region services
 export const packingService = {
     getPackageDetails(request: GetPackageDetailsRequest): Promise<PackingDetail> {
         return apiClient.get<PackingDetail>(API_ENDPOINTS.packing.getPackageDetails, {
@@ -121,3 +126,4 @@ export const packingService = {
         })
     },
 }
+//#endregion services
