@@ -4,6 +4,7 @@ import storage from 'redux-persist/lib/storage'
 import appReducer from './slices/appSlice'
 import authReducer from './slices/authSlice'
 import warehouseReducer from './slices/warehouseSlice'
+import packingReducer from './slices/packingSlice'
 
 const persistConfig = {
     key: 'wh-packaging-root',
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
     app: appReducer,
     auth: authReducer,
     warehouse: warehouseReducer,
+    packing: packingReducer,
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
