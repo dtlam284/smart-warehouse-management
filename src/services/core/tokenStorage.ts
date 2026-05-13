@@ -28,7 +28,7 @@ export class BrowserTokenStorage implements ITokenStorage {
             try {
                 const parsed = JSON.parse(raw) as IAuthTokens
 
-                if (!parsed.accessToken || !parsed.refreshToken) {
+                if (!parsed.accessToken) {
                     return null
                 }
 

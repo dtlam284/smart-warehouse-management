@@ -9,3 +9,10 @@ export const apiClient = new HttpClient({
     tokenStorage,
     refreshPath: API_ENDPOINTS.auth.refresh,
 })
+
+export const configApiClient = new HttpClient({
+    baseUrl: env.configApiBaseUrl,
+    timeoutMs: env.apiTimeoutMs,
+    tokenStorage,
+    refreshPath: API_ENDPOINTS.auth.refresh,
+})

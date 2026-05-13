@@ -49,7 +49,8 @@ interface IBackendApiEnvelope<TData = unknown> {
 
 const isAbsoluteUrl = (value: string): boolean => /^https?:\/\//i.test(value)
 
-const ensureLeadingSlash = (value: string): string => (value.startsWith('/') ? value : `/${value}`)
+const ensureLeadingSlash = (value: string): string =>
+    value.startsWith('/') ? value : `/${value}`
 
 const stripTrailingSlash = (value: string): string => value.replace(/\/+$/, '')
 
@@ -69,7 +70,11 @@ const normalizeQueryValue = (value: Exclude<QueryValue, ApiRecord>): string => {
     return String(value)
 }
 
-const appendQueryParam = (searchParams: URLSearchParams, key: string, value: QueryValue): void => {
+const appendQueryParam = (
+    searchParams: URLSearchParams,
+    key: string,
+    value: QueryValue,
+): void => {
     if (value === undefined || value === null) {
         return
     }
@@ -110,7 +115,10 @@ const appendQueryParam = (searchParams: URLSearchParams, key: string, value: Que
 const resolveUrl = (baseUrl: string, path: string, query?: QueryParams): URL => {
     const url = isAbsoluteUrl(path)
         ? new URL(path)
-        : new URL(`${stripTrailingSlash(baseUrl)}${ensureLeadingSlash(path)}`, getRuntimeOrigin())
+        : new URL(
+              `${stripTrailingSlash(baseUrl)}${ensureLeadingSlash(path)}`,
+              getRuntimeOrigin(),
+          )
 
     if (query) {
         Object.entries(query).forEach(([key, value]) => {
@@ -214,13 +222,22 @@ const extractErrorMessage = (payload: unknown, fallback: string): string => {
     return fallback
 }
 
-const normalizeBackendPayload = (payload: unknown, status: number, url: string): unknown => {
+const normalizeBackendPayload = (
+    payload: unknown,
+    status: number,
+    url: string,
+): unknown => {
     if (!isBackendApiEnvelope(payload)) {
         return payload
     }
 
     if (typeof payload.Code === 'number' && payload.Code < 0) {
-        throw new ApiError(extractErrorMessage(payload, 'Request failed'), status, url, payload)
+        throw new ApiError(
+            extractErrorMessage(payload, 'Request failed'),
+            status,
+            url,
+            payload,
+        )
     }
 
     if ('Data' in payload && payload.Data !== undefined && payload.Data !== null) {
@@ -385,14 +402,23 @@ export class HttpClient {
                 )
             }
 
-            return normalizeBackendPayload(payload, response.status, url.toString()) as TResponse
+            return normalizeBackendPayload(
+                payload,
+                response.status,
+                url.toString(),
+            ) as TResponse
         } catch (error) {
             if (error instanceof ApiError) {
                 throw error
             }
 
             if (error instanceof Error && error.name === 'AbortError') {
-                throw new ApiError('Request timeout or aborted', 408, url.toString(), null)
+                throw new ApiError(
+                    'Request timeout or aborted',
+                    408,
+                    url.toString(),
+                    null,
+                )
             }
 
             throw new ApiError('Network request failed', 0, url.toString(), error)
@@ -410,9 +436,11 @@ export class HttpClient {
         }
 
         if (!this.refreshPromise) {
-            this.refreshPromise = this.refreshAccessToken(existing.refreshToken).finally(() => {
-                this.refreshPromise = null
-            })
+            this.refreshPromise = this.refreshAccessToken(existing.refreshToken).finally(
+                () => {
+                    this.refreshPromise = null
+                },
+            )
         }
 
         return this.refreshPromise

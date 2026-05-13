@@ -1,15 +1,23 @@
 //#region types
-export type ApiRecord = Record<string, unknown>
-
-export type PrimitiveQueryValue = string | number | boolean | null | undefined | Date
-
 export type QueryValue =
+    | string
+    | number
+    | boolean
+    | Date
+    | null
+    | undefined
+    | QueryValue[]
+    | ApiRecord
     | PrimitiveQueryValue
     | PrimitiveQueryValue[]
     | IQueryObjectValue
     | IQueryObjectValue[]
 
+export type PrimitiveQueryValue = string | number | boolean | null | undefined | Date
+
 export type QueryParams = Record<string, QueryValue>
+
+export type ApiRecord = Record<string, unknown>
 
 export type EntityId = string | number
 //#endregion types

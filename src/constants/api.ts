@@ -18,7 +18,7 @@ export const API_ENDPOINTS = {
         forgotPassword: 'api/account/forgot-password',
         resetPassword: 'api/account/reset-password',
         refresh: '/auth/refresh',
-        logout: '/api/account/logout', // TODO: replace with real endpoint
+        logout: 'api/account/logout', // TODO: replace with real endpoint
         logoutAll: '/auth/logout/all', // TODO: replace with real endpoint
         me: '/auth/me', // TODO: replace with real endpoint
         sessions: '/auth/sessions', // TODO: replace with real endpoint
@@ -67,5 +67,47 @@ export const API_ENDPOINTS = {
         stats: '/admin/login-audit/stats',
     },
     //#endregion login audit endpoints
+
+    //#region config
+    config: {
+        getConfig: 'api/config', // not sure yet
+    },
+    //#endregion config
+
+    //#region shipping providers
+    shippingProviders: {
+        list: 'api/orders/get-list-shipping-unit',
+    },
+    //#endregion shipping providers
+
+    //#region packing
+    packing: {
+        getPackageDetails: 'api-fulfillment/packages/get-package-details', // not found yet
+        updatePacking: 'api/v2/orders/delivery-packing',
+        removePacking: 'api/v2/orders/remove-packing',
+        packingList: 'api/v2/orders/get-by-page-packing',
+        statistics: 'api/v2/orders/get-order-packing-statistics',
+    },
+    //#endregion packing
+
+    //#region handover
+    handover: {
+        updateHandover: 'api/v2/orders/delivery-handover',
+        removeHandover: 'api/v2/orders/remove-handover',
+        handoverList: 'api/v2/orders/get-by-page-handover',
+        statistics: 'api/v2/orders/get-order-handover-statistics',
+    },
+    //#endregion handover
+
+    //#region return delivery
+    returDelivery: {
+        getReturnDetail: 'api/orders/return-with-items/items',
+        confirmReturn: 'api/orders/return-with-items',
+        confirmReturnNoLayout: 'api/orders/return-with-items-no-layout',
+        removeReturn: 'api/orders/return-with-items',
+        returnList: 'api/orders/get-by-page-return-with-items',
+        statistics: 'api/v2/orders/get-order-return-statistics',
+    },
+    //#endregion return delivery
 } as const
 //#endregion API Endpoints
