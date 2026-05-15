@@ -12,9 +12,9 @@ import { AuthFlowGuard } from './AuthFlowGuard'
 import { ProtectedAdminLayout } from './ProtectedAdminLayout'
 
 //#region lazy screens
-const DashboardScreen = React.lazy(() =>
-    import('../screens/Dashboard/DashboardScreen').then((module) => ({
-        default: module.DashboardScreen,
+const WorkplacePage = React.lazy(() =>
+    import('../screens/Workplace/WorkplacePage').then((module) => ({
+        default: module.WorkplacePage,
     })),
 )
 
@@ -120,7 +120,7 @@ export const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                Component: lazyRoute(DashboardScreen),
+                Component: lazyRoute(WorkplacePage),
             },
             {
                 path: '*',
