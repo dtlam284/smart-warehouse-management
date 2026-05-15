@@ -9,6 +9,11 @@ import {
 } from '@/components/packing'
 import { ScannerInput } from '@/components/scanner/ScannerInput'
 import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
+import { 
+    HandoverFilterBar, 
+    HandoverRecordList, 
+    HandoverStatsBar 
+} from '@/components/handover'
 import { Badge, EmptyState, ErrorMessage } from '@/components/ui'
 import { useScanProcessor } from '@/hooks/useScanProcessor'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -63,24 +68,13 @@ function PackingContent() {
     )
 }
 
-function HandoverPlaceholder() {
+function HandoverContent() {
     return (
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Danh sách bàn giao
-                </h2>
-                <Badge variant="success">HANDOVER</Badge>
-            </div>
-
-            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                💡 Chọn đơn vị vận chuyển ở bên trái, sau đó quét mã kiện để bàn giao.
-                <br />
-                Quét mã đã có trong danh sách sẽ được xử lý dedup ở workflow state.
-            </div>
-
-            <p className="py-6 text-center text-sm text-slate-500">Chưa có kiện nào được bàn giao</p>
-        </section>
+        <div className="space-y-4">
+            <HandoverStatsBar />
+            <HandoverFilterBar />
+            <HandoverRecordList />
+        </div>
     )
 }
 
@@ -123,7 +117,7 @@ function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
             return <PackingContent />
 
         case 'HANDOVER':
-            return <HandoverPlaceholder />
+            return <HandoverContent />
 
         case 'RETURN_DELIVERY':
             return <ReturnPlaceholder />
