@@ -16,7 +16,16 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
-
+    server: {
+        proxy: {
+            '/api-proxy': {
+                target: 'https://api.sagacom.io',
+                changeOrigin: true,
+                secure: true,
+                rewrite: (path) => path.replace(/^\/api-proxy/, ''),
+            },
+        },
+    },
     // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
     assetsInclude: ['**/*.svg', '**/*.csv'],
 })
