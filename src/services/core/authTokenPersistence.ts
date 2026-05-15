@@ -1,12 +1,21 @@
+import { env } from '@/config/env'
 import { apiClient } from './apiClient'
 
 type TokenRecord = Record<string, unknown>
 
-interface PersistAuthTokensOptions {
+interface IPersistAuthTokensOptions {
     persistRootToken?: boolean
 }
 
-const ROOT_AUTH_TOKEN_STORAGE_KEY = 'base.cms.auth.root'
+const ROOT_AUTH_TOKEN_STORAGE_KEY = `${env.tokenStorageKey}.root`
+
+const getBrowserStorage = (): Storage | undefined => {
+    if (typeof window === 'undefined') {
+        return undefined
+    }
+
+    return window.localStorage
+}
 
 const getRecord = (value: unknown): TokenRecord => {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -16,7 +25,10 @@ const getRecord = (value: unknown): TokenRecord => {
     return {}
 }
 
-const getStringValue = (records: TokenRecord[], keys: string[]): string | undefined => {
+const getStringValue = (
+    records: TokenRecord[],
+    keys: string[],
+): string | undefined => {
     for (const record of records) {
         for (const key of keys) {
             const value = record[key]
@@ -30,7 +42,10 @@ const getStringValue = (records: TokenRecord[], keys: string[]): string | undefi
     return undefined
 }
 
-const getNumberValue = (records: TokenRecord[], keys: string[]): number | undefined => {
+const getNumberValue = (
+    records: TokenRecord[],
+    keys: string[],
+): number | undefined => {
     for (const record of records) {
         for (const key of keys) {
             const value = record[key]
@@ -70,11 +85,46 @@ const normalizeTokenExpires = (expires?: number): number | undefined => {
     return expires
 }
 
-const getTokenRecordsFromResponse = (response: unknown): TokenRecord[] => {
+const readStoredAccessToken = (storageKey: string): string | undefined => {
+    const storage = getBrowserStorage()
+    const rawValue = storage?.getItem(storageKey)
+
+    if (!rawValue) {
+        return undefined
+    }
+
+    try {
+        const parsed = JSON.parse(rawValue) as unknown
+
+        if (parsed && typeof parsed === 'object') {
+            const record = parsed as TokenRecord
+
+            const accessToken =
+                record.accessToken ??
+                record.AccessToken ??
+                record.access_token ??
+                record.token ??
+                record.Token
+
+            if (typeof accessToken === 'string' && accessToken.trim().length > 0) {
+                return accessToken
+            }
+        }
+    } catch {
+        return rawValue
+    }
+
+    return rawValue
+}
+
+export const persistAuthTokensFromResponse = (
+    response: unknown,
+    options?: IPersistAuthTokensOptions,
+): void => {
     const rootRecord = getRecord(response)
     const dataRecord = getRecord(rootRecord.Data ?? rootRecord.data)
     const tokenRecord = getRecord(
-        rootRecord.Token ??
+            rootRecord.Token ??
             rootRecord.token ??
             rootRecord.AuthToken ??
             rootRecord.authToken ??
@@ -84,32 +134,7 @@ const getTokenRecordsFromResponse = (response: unknown): TokenRecord[] => {
             dataRecord.authToken,
     )
 
-    return [dataRecord, tokenRecord, rootRecord]
-}
-
-export const getAccessTokenFromResponse = (response: unknown): string | undefined => {
-    const records = getTokenRecordsFromResponse(response)
-
-    return getStringValue(records, ['AccessToken', 'accessToken', 'access_token', 'Token', 'token'])
-}
-
-export const persistRootAuthToken = (accessToken: string): void => {
-    localStorage.setItem(ROOT_AUTH_TOKEN_STORAGE_KEY, accessToken)
-}
-
-export const getRootAuthToken = (): string | null => {
-    return localStorage.getItem(ROOT_AUTH_TOKEN_STORAGE_KEY)
-}
-
-export const clearRootAuthToken = (): void => {
-    localStorage.removeItem(ROOT_AUTH_TOKEN_STORAGE_KEY)
-}
-
-export const persistAuthTokensFromResponse = (
-    response: unknown,
-    options: PersistAuthTokensOptions = {},
-): void => {
-    const records = getTokenRecordsFromResponse(response)
+    const records = [dataRecord, tokenRecord, rootRecord]
 
     const accessToken = getStringValue(records, [
         'AccessToken',
@@ -119,7 +144,11 @@ export const persistAuthTokensFromResponse = (
         'token',
     ])
 
-    const refreshToken = getStringValue(records, ['RefreshToken', 'refreshToken', 'refresh_token'])
+    const refreshToken = getStringValue(records, [
+        'RefreshToken',
+        'refreshToken',
+        'refresh_token',
+    ])
 
     const rawExpires = getNumberValue(records, [
         'Expires',
@@ -141,12 +170,20 @@ export const persistAuthTokensFromResponse = (
         tokenExpires: normalizeTokenExpires(rawExpires),
     })
 
-    if (options.persistRootToken) {
-        persistRootAuthToken(accessToken)
+    if (options?.persistRootToken) {
+        getBrowserStorage()?.setItem(ROOT_AUTH_TOKEN_STORAGE_KEY, accessToken)
     }
+}
+
+export const getActiveAuthToken = (): string | undefined => {
+    return readStoredAccessToken(env.tokenStorageKey)
+}
+
+export const getRootAuthToken = (): string | undefined => {
+    return readStoredAccessToken(ROOT_AUTH_TOKEN_STORAGE_KEY)
 }
 
 export const clearPersistedAuthTokens = (): void => {
     apiClient.clearTokens()
-    clearRootAuthToken()
+    getBrowserStorage()?.removeItem(ROOT_AUTH_TOKEN_STORAGE_KEY)
 }

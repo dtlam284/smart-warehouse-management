@@ -1,9 +1,8 @@
 import { API_ENDPOINTS } from '@/constants/api'
-import { env } from '@/config/env'
-import { apiClient } from '@/services/core/apiClient'
+import { apiClient } from '@/services/core'
 import {
     clearPersistedAuthTokens,
-    getRootAuthToken,
+    getActiveAuthToken,
     persistAuthTokensFromResponse,
 } from '@/services/core/authTokenPersistence'
 import type {
@@ -14,17 +13,16 @@ import type {
     IAuthLoginRequest,
     IAuthLoginResponse,
     IAuthLogoutResponse,
+    IAuthMeResponse,
     IAuthRegisterRequest,
     IAuthRegisterResponse,
     IAuthResendOtpRequest,
     IAuthResendOtpResponse,
     IAuthResetPasswordRequest,
     IAuthResetPasswordResponse,
-    IAdminUser,
-    IAuthMeResponse,
 } from '@/models'
 
-//#region backend requests
+//#region backend request models
 interface IAuthLoginApiRequest {
     Host: string
     Code: string
@@ -62,9 +60,10 @@ interface IAuthResetPasswordApiRequest {
     Code: string
     ContinueUrl: string
 }
-//#endregion backend requests
+//#endregion backend request models
 
 //#region constants
+const DEFAULT_AUTH_LOGIN_FUNCTION = ''
 const DEFAULT_TYPE_VERIFICATION = 'Email'
 //#endregion constants
 
@@ -98,23 +97,45 @@ const getDefaultContinueUrl = (path: string): string => {
 const getFirstNonEmptyString = (...values: Array<string | undefined>): string => {
     return values.find((value) => value !== undefined && value.trim().length > 0) ?? ''
 }
+
+const getEnvString = (value: string | undefined): string => {
+    return value?.trim() ?? ''
+}
 //#endregion browser helpers
 
-//#region requests
+//#region env helpers
+const getAuthLoginHost = (): string => {
+    return getEnvString(import.meta.env.VITE_AUTH_LOGIN_HOST)
+}
+
+const getAuthLoginCode = (): string => {
+    return getEnvString(import.meta.env.VITE_AUTH_LOGIN_CODE)
+}
+
+const getAuthLoginFunction = (): string => {
+    return getEnvString(import.meta.env.VITE_AUTH_LOGIN_FUNCTION)
+}
+//#endregion env helpers
+
+//#region request mappers
 const toLoginApiRequest = (payload: IAuthLoginRequest): IAuthLoginApiRequest => {
     return {
-        Host: getFirstNonEmptyString(payload.host, env.authLoginHost, getBrowserHost()),
-        Code: getFirstNonEmptyString(payload.code, env.authLoginCode),
-        Function: getFirstNonEmptyString(payload.functionPath, env.authLoginFunction),
-        UserName: payload.username,
+        Host: getFirstNonEmptyString(payload.host, getAuthLoginHost(), getBrowserHost()),
+        Code: getFirstNonEmptyString(payload.code, getAuthLoginCode()),
+        Function: getFirstNonEmptyString(
+            payload.functionPath,
+            getAuthLoginFunction(),
+            DEFAULT_AUTH_LOGIN_FUNCTION,
+        ),
+        UserName: payload.username.trim(),
         Password: payload.password,
     }
 }
 
 const toRegisterApiRequest = (payload: IAuthRegisterRequest): IAuthRegisterApiRequest => {
     return {
-        Username: payload.username,
-        DisplayName: payload.fullName,
+        Username: payload.username.trim(),
+        DisplayName: payload.fullName.trim(),
         Password: payload.password,
         ConfirmPassword: payload.confirmPassword,
     }
@@ -122,14 +143,14 @@ const toRegisterApiRequest = (payload: IAuthRegisterRequest): IAuthRegisterApiRe
 
 const toActivateApiRequest = (payload: IAuthActivateRequest): IAuthActivateApiRequest => {
     return {
-        Username: payload.username,
-        Code: payload.code,
+        Username: payload.username.trim(),
+        Code: payload.code.trim(),
     }
 }
 
 const toResendOtpApiRequest = (payload: IAuthResendOtpRequest): IAuthResendOtpApiRequest => {
     return {
-        Username: payload.username,
+        Username: payload.username.trim(),
     }
 }
 
@@ -137,7 +158,7 @@ const toForgotPasswordApiRequest = (
     payload: IAuthForgotPasswordRequest,
 ): IAuthForgotPasswordApiRequest => {
     return {
-        UserName: payload.username,
+        UserName: payload.username.trim(),
         TypeVerification: payload.typeVerification ?? DEFAULT_TYPE_VERIFICATION,
         ContinueUrl: payload.continueUrl ?? getDefaultContinueUrl('/auth/reset-password'),
     }
@@ -147,103 +168,27 @@ const toResetPasswordApiRequest = (
     payload: IAuthResetPasswordRequest,
 ): IAuthResetPasswordApiRequest => {
     return {
-        UserName: payload.username,
+        UserName: payload.username.trim(),
         Password: payload.password,
         ConfirmPassword: payload.confirmPassword,
-        Code: payload.code,
+        Code: payload.code.trim(),
         ContinueUrl: payload.continueUrl ?? getDefaultContinueUrl('/auth/login'),
     }
 }
-//#endregion requests
+//#endregion request mappers
 
-//#region Response Mappers
-type LoginResponseRecord = Record<string, unknown>
-
-const getStringValue = (record: LoginResponseRecord, keys: string[]): string | undefined => {
-    for (const key of keys) {
-        const value = record[key]
-
-        if (typeof value === 'string' && value.trim().length > 0) {
-            return value
-        }
-    }
-
-    return undefined
-}
-
-const getNumberValue = (record: LoginResponseRecord, keys: string[]): number | undefined => {
-    for (const key of keys) {
-        const value = record[key]
-
-        if (typeof value === 'number' && Number.isFinite(value)) {
-            return value
-        }
-
-        if (typeof value === 'string' && value.trim().length > 0) {
-            const parsedNumber = Number(value)
-
-            if (Number.isFinite(parsedNumber)) {
-                return parsedNumber
-            }
-
-            const parsedDate = Date.parse(value)
-
-            if (Number.isFinite(parsedDate)) {
-                return parsedDate
-            }
-        }
-    }
-
-    return undefined
-}
-
-const persistLoginTokens = (response: IAuthLoginResponse): void => {
-    const responseRecord = response as unknown as LoginResponseRecord
-
-    const accessToken = getStringValue(responseRecord, [
-        'accessToken',
-        'AccessToken',
-        'token',
-        'Token',
-        'access_token',
-    ])
-
-    const refreshToken = getStringValue(responseRecord, [
-        'refreshToken',
-        'RefreshToken',
-        'refresh_token',
-    ])
-
-    const tokenExpires = getNumberValue(responseRecord, [
-        'tokenExpires',
-        'TokenExpires',
-        'expiresAt',
-        'ExpiresAt',
-        'ExpiredAt',
-    ])
-
-    if (!accessToken) {
-        return
-    }
-
-    apiClient.setTokens({
-        accessToken,
-        refreshToken: refreshToken ?? '',
-        tokenExpires,
-    })
-}
-//#endregion Response Mappers
-
-//#region auth services
+//#region auth service
 export const authService = {
+    //#region login
     async login(payload: IAuthLoginRequest): Promise<IAuthLoginResponse> {
-        const response = await apiClient.post<IAuthLoginResponse>(API_ENDPOINTS.auth.login, {
-            Host: env.authLoginHost,
-            Code: env.authLoginCode,
-            Function: env.authLoginFunction,
-            UserName: payload.username.trim(),
-            Password: payload.password,
-        })
+        const response = await apiClient.post<IAuthLoginResponse>(
+            API_ENDPOINTS.auth.login,
+            toLoginApiRequest(payload),
+            {
+                requiresAuth: false,
+                retryOnUnauthorized: false,
+            },
+        )
 
         persistAuthTokensFromResponse(response, {
             persistRootToken: true,
@@ -251,23 +196,29 @@ export const authService = {
 
         return response
     },
+    //#endregion login
 
+    //#region registration
     register(payload: IAuthRegisterRequest): Promise<IAuthRegisterResponse> {
         return apiClient.post<IAuthRegisterResponse>(
             API_ENDPOINTS.auth.register,
             toRegisterApiRequest(payload),
             {
                 requiresAuth: false,
+                retryOnUnauthorized: false,
             },
         )
     },
+    //#endregion registration
 
+    //#region account activation
     activate(payload: IAuthActivateRequest): Promise<IAuthActivateResponse> {
         return apiClient.post<IAuthActivateResponse>(
             API_ENDPOINTS.auth.activate,
             toActivateApiRequest(payload),
             {
                 requiresAuth: false,
+                retryOnUnauthorized: false,
             },
         )
     },
@@ -278,16 +229,20 @@ export const authService = {
             toResendOtpApiRequest(payload),
             {
                 requiresAuth: false,
+                retryOnUnauthorized: false,
             },
         )
     },
+    //#endregion account activation
 
+    //#region password recovery
     forgotPassword(payload: IAuthForgotPasswordRequest): Promise<IAuthForgotPasswordResponse> {
         return apiClient.post<IAuthForgotPasswordResponse>(
             API_ENDPOINTS.auth.forgotPassword,
             toForgotPasswordApiRequest(payload),
             {
                 requiresAuth: false,
+                retryOnUnauthorized: false,
             },
         )
     },
@@ -298,27 +253,29 @@ export const authService = {
             toResetPasswordApiRequest(payload),
             {
                 requiresAuth: false,
+                retryOnUnauthorized: false,
             },
         )
     },
+    //#endregion password recovery
 
-    async getMe(): Promise<IAdminUser> {
-        await apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
-            retryOnUnauthorized: false,
-        })
-
-        return await authService.getMe()
-    },
-
+    //#region session
     async logout(): Promise<IAuthLogoutResponse> {
-        const rootToken = getRootAuthToken()
+        const activeToken = getActiveAuthToken()
 
         try {
-            if (rootToken) {
-                await apiClient.post<IAuthLogoutResponse>(API_ENDPOINTS.auth.logout, undefined, {
-                    authToken: rootToken,
-                    retryOnUnauthorized: false,
-                })
+            if (activeToken) {
+                await apiClient.post<IAuthLogoutResponse>(
+                    API_ENDPOINTS.auth.logout,
+                    undefined,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${activeToken}`,
+                        },
+                        requiresAuth: false,
+                        retryOnUnauthorized: false,
+                    },
+                )
             }
         } finally {
             clearPersistedAuthTokens()
@@ -329,12 +286,11 @@ export const authService = {
         }
     },
 
-    getStoredTokens() {
-        return apiClient.tokens
+    getMe(): Promise<IAuthMeResponse> {
+        return apiClient.get<IAuthMeResponse>(API_ENDPOINTS.auth.me, {
+            retryOnUnauthorized: false,
+        })
     },
-
-    clearStoredTokens(): void {
-        apiClient.clearTokens()
-    },
+    //#endregion session
 }
-//#endregion auth services
+//#endregion auth service
