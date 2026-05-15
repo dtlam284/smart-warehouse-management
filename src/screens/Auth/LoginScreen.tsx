@@ -67,7 +67,11 @@ export function LoginScreen() {
         )
 
         if (loginThunk.fulfilled.match(result)) {
-            navigate(appendRedirectParam('/auth/select-tenant', location.search), {
+            const nextAuthPath = result.payload.shouldSkipTenantSelection
+                ? '/auth/select-role'
+                : '/auth/select-tenant'
+
+            navigate(appendRedirectParam(nextAuthPath, location.search), {
                 replace: true,
             })
             return
