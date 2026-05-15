@@ -2,13 +2,14 @@ import { Truck } from 'lucide-react'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { ModeSelector } from '@/components/layout/ModeSelector'
 import { ScanTypeSelector } from '@/components/layout/ScanTypeSelector'
+import {
+    PackingActivePanel,
+    PackingFilterBar,
+    PackingRecordList,
+} from '@/components/packing'
 import { ScannerInput } from '@/components/scanner/ScannerInput'
 import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
-import { 
-    Badge, 
-    EmptyState, 
-    ErrorMessage 
-} from '@/components/ui'
+import { Badge, EmptyState, ErrorMessage } from '@/components/ui'
 import { useScanProcessor } from '@/hooks/useScanProcessor'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -24,11 +25,14 @@ import {
     setWorkMode,
     toggleRemoveMode,
 } from '@/store/slices/appSlice'
-import type { ScanInputType, WorkMode } from '@/models/common'
-
+import type { ScanInputType, WorkMode } from '@/models/common/CommonInterface'
 
 //#region helpers
-function getScannerPlaceholder(workMode: WorkMode, scanInputType: ScanInputType, isRemoveMode: boolean): string {
+function getScannerPlaceholder(
+    workMode: WorkMode,
+    scanInputType: ScanInputType,
+    isRemoveMode: boolean,
+): string {
     if (isRemoveMode) {
         return 'Quét mã cần xóa...'
     }
@@ -48,37 +52,13 @@ function getScannerPlaceholder(workMode: WorkMode, scanInputType: ScanInputType,
 }
 //#endregion helpers
 
-//#region content placeholders
-function PackingPlaceholder() {
+//#region content
+function PackingContent() {
     return (
         <div className="space-y-4">
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Kiện đang đóng gói
-                    </h2>
-                    <Badge variant="info">PACKING</Badge>
-                </div>
-
-                <EmptyState
-                    icon="📦"
-                    title="Chưa có kiện nào đang xử lý"
-                    description="Quét mã kiện ở panel bên trái để bắt đầu đóng gói."
-                />
-            </section>
-
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Kiện đã đóng gói hôm nay
-                    </h2>
-                    <Badge variant="info">0 kiện</Badge>
-                </div>
-
-                <p className="py-4 text-center text-sm text-slate-500">
-                    Chưa có kiện nào được đóng gói hôm nay
-                </p>
-            </section>
+            <PackingActivePanel />
+            <PackingFilterBar />
+            <PackingRecordList />
         </div>
     )
 }
@@ -140,7 +120,7 @@ function ReturnPlaceholder() {
 function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
     switch (workMode) {
         case 'PACKING':
-            return <PackingPlaceholder />
+            return <PackingContent />
 
         case 'HANDOVER':
             return <HandoverPlaceholder />
@@ -151,12 +131,15 @@ function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
         case 'NONE':
             return (
                 <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <EmptyState title="Chọn chế độ làm việc" description="Chọn một workflow ở panel bên trái để bắt đầu." />
+                    <EmptyState
+                        title="Chọn chế độ làm việc"
+                        description="Chọn một workflow ở panel bên trái để bắt đầu."
+                    />
                 </section>
             )
     }
 }
-//#endregion content placeholders
+//#endregion content
 
 //#region component
 export function WorkplacePage() {
