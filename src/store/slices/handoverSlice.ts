@@ -23,9 +23,14 @@ function getDeliveryCodesFromRecords(records: IHandoverRecord[]): string[] {
     return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
 }
 
-function prependHandoverRecords(currentRecords: IHandoverRecord[], newRecords: IHandoverRecord[]): IHandoverRecord[] {
+function prependHandoverRecords(
+    currentRecords: IHandoverRecord[],
+    newRecords: IHandoverRecord[],
+): IHandoverRecord[] {
     const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
-    const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
+    const filteredCurrentRecords = currentRecords.filter(
+        (record) => !newDeliveryCodes.has(record.DeliveryCode),
+    )
 
     return [...newRecords, ...filteredCurrentRecords]
 }
@@ -67,13 +72,17 @@ export const addHandoverRecord = createAppAsyncThunk(
     'handover/addHandoverRecord',
     async (request: IUpdateHandoverRequest, { rejectWithValue }) => {
         if (!hasShippingUnitId(request)) {
-            return rejectWithValue('Please select a shipping unit before delivery. (Vui lòng chọn đơn vị vận chuyển trước khi bàn giao.)')
+            return rejectWithValue(
+                'Please select a shipping unit before delivery. (Vui lòng chọn đơn vị vận chuyển trước khi bàn giao.)',
+            )
         }
 
         try {
             return await handoverService.addHandoverRecord(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to record handover. (Không thể ghi nhận bàn giao.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to record handover. (Không thể ghi nhận bàn giao.)'),
+            )
         }
     },
 )
@@ -82,13 +91,17 @@ export const removeHandoverRecord = createAppAsyncThunk(
     'handover/removeHandoverRecord',
     async (request: IRemoveHandoverRequest, { rejectWithValue }) => {
         if (!hasShippingUnitId(request)) {
-            return rejectWithValue('Please select a shipping unit before deleting the handover. (Vui lòng chọn đơn vị vận chuyển trước khi xóa bàn giao.)')
+            return rejectWithValue(
+                'Please select a shipping unit before deleting the handover. (Vui lòng chọn đơn vị vận chuyển trước khi xóa bàn giao.)',
+            )
         }
 
         try {
             return await handoverService.removeHandoverRecord(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to delete handover record. (Không thể xóa record bàn giao.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to delete handover record. (Không thể xóa record bàn giao.)'),
+            )
         }
     },
 )
@@ -99,7 +112,9 @@ export const fetchHandoverList = createAppAsyncThunk(
         try {
             return await handoverService.getHandoverList(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to load handover list. (Không thể tải danh sách bàn giao.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to load handover list. (Không thể tải danh sách bàn giao.)'),
+            )
         }
     },
 )
@@ -110,7 +125,9 @@ export const loadHandoverStats = createAppAsyncThunk(
         try {
             return await handoverService.getHandoverStats(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to load handover statistics. (Không thể tải thống kê bàn giao.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to load handover statistics. (Không thể tải thống kê bàn giao.)'),
+            )
         }
     },
 )
@@ -150,6 +167,11 @@ const handoverSlice = createSlice({
             })
             .addCase(addHandoverRecord.fulfilled, (state, action) => {
                 state.isUpdating = false
+
+                if (action.payload.length === 0) {
+                    return
+                }
+
                 state.records = prependHandoverRecords(state.records, action.payload)
                 state.totalRows += action.payload.length
             })

@@ -3,9 +3,9 @@ import { apiClient, configApiClient } from '@/services/core'
 import type {
     GetConfigRequest,
     GetConfigResponse,
-    ShippingProvider,
-    ShippingProvidersResponse,
-    WarehouseOperationConfig,
+    IShippingProvider,
+    IShippingProvidersResponse,
+    IWarehouseOperationConfig,
 } from '@/models/warehouse/WarehouseInterface'
 
 //#region constants
@@ -14,7 +14,7 @@ const LAYOUT_CONFIG_KEY = 'LAYOUT'
 //#endregion constants
 
 //#region helpers
-function parseWarehouseOperationConfig(configs: GetConfigResponse): WarehouseOperationConfig {
+function parseWarehouseOperationConfig(configs: GetConfigResponse): IWarehouseOperationConfig {
     const warehouseConfig = configs.find((item) => item.Key === WAREHOUSE_CONFIG_KEY)
 
     const layoutConfig = warehouseConfig?.Child?.find((item) => item.Key === LAYOUT_CONFIG_KEY)
@@ -31,7 +31,7 @@ export const warehouseService = {
         request: GetConfigRequest = {
             Key: WAREHOUSE_CONFIG_KEY,
         },
-    ): Promise<WarehouseOperationConfig> {
+    ): Promise<IWarehouseOperationConfig> {
         const response = await configApiClient.get<GetConfigResponse>(API_ENDPOINTS.config.getConfig, {
             query: { ...request },
         })
@@ -39,14 +39,29 @@ export const warehouseService = {
         return parseWarehouseOperationConfig(response)
     },
 
-    async getShippingProviders(keyword?: string): Promise<ShippingProvider[]> {
-        const response = await apiClient.get<ShippingProvidersResponse>(API_ENDPOINTS.shippingProviders.list, {
-            query: {
-                keyword,
+    async getShippingProviders(keyword?: string): Promise<IShippingProvider[]> {
+        const response = await apiClient.get<IShippingProvidersResponse>(
+            API_ENDPOINTS.shippingProviders.list,
+            {
+                query: {
+                    Keyword: keyword,
+                },
             },
-        })
+        )
 
-        return response.Result
-    },
+        if (Array.isArray(response)) {
+            return response
+        }
+
+        if (Array.isArray(response.Data)) {
+            return response.Data
+        }
+
+        if (Array.isArray(response.Result)) {
+            return response.Result
+        }
+
+        return []
+    }
 }
 //#endregion services

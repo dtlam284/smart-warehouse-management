@@ -1,4 +1,10 @@
+import * as React from 'react'
 import { Truck } from 'lucide-react'
+import {
+    HandoverFilterBar,
+    HandoverRecordList,
+    HandoverStatsBar,
+} from '@/components/handover'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { ModeSelector } from '@/components/layout/ModeSelector'
 import { ScanTypeSelector } from '@/components/layout/ScanTypeSelector'
@@ -7,13 +13,16 @@ import {
     PackingFilterBar,
     PackingRecordList,
 } from '@/components/packing'
+import {
+    ReturnActivePanel,
+    ReturnFilterBar,
+    ReturnRecordList,
+    ReturnStatsBar,
+} from '@/components/return'
 import { ScannerInput } from '@/components/scanner/ScannerInput'
-import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
 import { 
-    HandoverFilterBar, 
-    HandoverRecordList, 
-    HandoverStatsBar 
-} from '@/components/handover'
+    ShippingProviderSelect 
+} from '@/components/shared/ShippingProviderSelect'
 import { Badge, EmptyState, ErrorMessage } from '@/components/ui'
 import { useScanProcessor } from '@/hooks/useScanProcessor'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -30,6 +39,8 @@ import {
     setWorkMode,
     toggleRemoveMode,
 } from '@/store/slices/appSlice'
+import { loadShippingProviders } from '@/store/slices/warehouseSlice'
+import { NotificationViewport } from '@/components/shared/NotificationViewport'
 import type { ScanInputType, WorkMode } from '@/models/common/CommonInterface'
 
 //#region helpers
@@ -78,35 +89,13 @@ function HandoverContent() {
     )
 }
 
-function ReturnPlaceholder() {
+function ReturnContent() {
     return (
         <div className="space-y-4">
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Đơn hàng hoàn trả
-                    </h2>
-                    <Badge variant="neutral" className="border-purple-200 bg-purple-50 text-purple-700">
-                        RETURN
-                    </Badge>
-                </div>
-
-                <EmptyState
-                    icon="↩️"
-                    title="Chưa có đơn hoàn nào đang xử lý"
-                    description="Quét mã đơn hoàn ở panel bên trái để bắt đầu."
-                />
-            </section>
-
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Đơn hoàn đã xác nhận hôm nay
-                </h2>
-
-                <p className="py-4 text-center text-sm text-slate-500">
-                    Chưa có đơn hoàn nào được xác nhận
-                </p>
-            </section>
+            <ReturnStatsBar />
+            <ReturnActivePanel />
+            <ReturnFilterBar />
+            <ReturnRecordList />
         </div>
     )
 }
@@ -120,7 +109,7 @@ function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
             return <HandoverContent />
 
         case 'RETURN_DELIVERY':
-            return <ReturnPlaceholder />
+            return <ReturnContent />
 
         case 'NONE':
             return (
@@ -139,11 +128,17 @@ function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
 export function WorkplacePage() {
     const dispatch = useAppDispatch()
 
+    React.useEffect(() => {
+        void dispatch(loadShippingProviders(undefined))
+    }, [dispatch])
+
     const workMode = useAppSelector(selectWorkMode)
     const scanInputType = useAppSelector(selectScanInputType)
     const isRemoveMode = useAppSelector(selectIsRemoveMode)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
     const providers = useAppSelector(selectShippingProviders)
+
+    // console.log('Workplace providers from selector:', providers)
 
     const { scanError, handleScan } = useScanProcessor()
 
@@ -246,6 +241,8 @@ export function WorkplacePage() {
                     <WorkplaceContent workMode={workMode} />
                 </main>
             </div>
+            
+            <NotificationViewport />
         </div>
     )
 }

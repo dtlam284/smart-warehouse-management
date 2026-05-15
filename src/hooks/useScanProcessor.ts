@@ -7,8 +7,10 @@ import {
     selectSelectedShippingProviderId,
     selectWorkMode,
 } from '@/store/selectors/appSelectors'
-import { selectPackingActiveDetail } from '@/store/selectors/packingSelectors'
-import { addHandoverRecord, removeHandoverRecord } from '@/store/slices/handoverSlice'
+import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
+import { selectPackingActiveDetail, selectPackingScannedSKUs } from '@/store/selectors/packingSelectors'
+import { addHandoverRecord, fetchHandoverList, removeHandoverRecord } from '@/store/slices/handoverSlice'
+import { showNotification } from '@/store/slices/notificationSlice'
 import { cancelPacking, incrementSKU, loadPackageDetails } from '@/store/slices/packingSlice'
 import { loadReturnDetail, removeReturnRecord } from '@/store/slices/returnSlice'
 
@@ -20,6 +22,20 @@ interface IUseScanProcessorResult {
 }
 //#endregion types
 
+//#region helpers
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'string' && error.trim().length > 0) {
+        return error
+    }
+
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message
+    }
+
+    return fallback
+}
+//#endregion helpers
+
 //#region hook
 export function useScanProcessor(): IUseScanProcessorResult {
     const dispatch = useAppDispatch()
@@ -28,7 +44,10 @@ export function useScanProcessor(): IUseScanProcessorResult {
     const scanInputType = useAppSelector(selectScanInputType)
     const isRemoveMode = useAppSelector(selectIsRemoveMode)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
+
     const activeDetail = useAppSelector(selectPackingActiveDetail)
+    const scannedSKUs = useAppSelector(selectPackingScannedSKUs)
+    const handoverFilters = useAppSelector(selectHandoverFilters)
 
     const [scanError, setScanError] = useState<string | null>(null)
 
@@ -36,13 +55,30 @@ export function useScanProcessor(): IUseScanProcessorResult {
         setScanError(null)
     }, [])
 
+    const notify = useCallback(
+        (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+            dispatch(
+                showNotification({
+                    type,
+                    message,
+                }),
+            )
+        },
+        [dispatch],
+    )
+
     const requireShippingProvider = useCallback((): string | null => {
         if (!selectedShippingProviderId) {
-            return 'Vui lòng chọn đơn vị vận chuyển trước khi quét'
+            const message = 'Vui lòng chọn đơn vị vận chuyển'
+
+            setScanError(message)
+            notify('error', message)
+
+            return null
         }
 
         return selectedShippingProviderId
-    }, [selectedShippingProviderId])
+    }, [notify, selectedShippingProviderId])
 
     const handlePackingScan = useCallback(
         (code: string) => {
@@ -55,24 +91,85 @@ export function useScanProcessor(): IUseScanProcessorResult {
                 }
 
                 void dispatch(cancelPacking(removePayload))
+                    .unwrap()
+                    .then(() => {
+                        notify('success', `Đã hủy đóng gói ${code}`)
+                    })
+                    .catch((error) => {
+                        const message = getErrorMessage(error, 'Không thể hủy đóng gói')
+
+                        setScanError(message)
+                        notify('error', message)
+                    })
+
                 return
             }
 
             if (!activeDetail) {
                 void dispatch(loadPackageDetails(payload))
+                    .unwrap()
+                    .then(() => {
+                        notify('info', `Đã tải kiện ${code}`)
+                    })
+                    .catch((error) => {
+                        const message = getErrorMessage(error, `Không tìm thấy kiện ${code}`)
+
+                        setScanError(message)
+                        notify('error', message)
+                    })
+
                 return
             }
 
-            const matchedSKU = activeDetail.PackageDetails.find((item) => item.ListingPropertyCode === code)
+            const matchedSKU = activeDetail.PackageDetails.find(
+                (item) => item.ListingPropertyCode === code,
+            )
 
             if (!matchedSKU) {
-                setScanError('SKU không có trong kiện này')
+                const message = `SKU ${code} không có trong kiện này`
+
+                setScanError(message)
+                notify('error', message)
+
+                return
+            }
+
+            const currentScannedCount = scannedSKUs[matchedSKU.ListingPropertyCode] ?? 0
+
+            if (currentScannedCount >= matchedSKU.Quantity) {
+                const message = `SKU ${matchedSKU.ListingPropertyCode} đã đủ số lượng`
+
+                setScanError(message)
+                notify('warning', message)
+
                 return
             }
 
             dispatch(incrementSKU(code))
+            setScanError(null)
         },
-        [activeDetail, dispatch, isRemoveMode, scanInputType, selectedShippingProviderId],
+        [
+            activeDetail,
+            dispatch,
+            isRemoveMode,
+            notify,
+            scanInputType,
+            scannedSKUs,
+            selectedShippingProviderId,
+        ],
+    )
+
+    const refetchHandoverList = useCallback(
+        (shippingUnitId: string) => {
+            void dispatch(
+                fetchHandoverList({
+                    ...handoverFilters,
+                    PageIndex: 0,
+                    ShippingUnitId: shippingUnitId
+                }),
+            )
+        },
+        [dispatch, handoverFilters],
     )
 
     const handleHandoverScan = useCallback(
@@ -90,12 +187,42 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
             if (isRemoveMode) {
                 void dispatch(removeHandoverRecord(payload))
+                    .unwrap()
+                    .then(() => {
+                        notify('success', `Đã xóa bàn giao ${code}`)
+                        refetchHandoverList(shippingUnitId)
+                    })
+                    .catch((error) => {
+                        const message = getErrorMessage(error, 'Không thể xóa bàn giao')
+
+                        setScanError(message)
+                        notify('error', message)
+                    })
+
                 return
             }
 
             void dispatch(addHandoverRecord(payload))
+                .unwrap()
+                .then(() => {
+                    notify('success', `Bàn giao ${code} thành công`)
+                    refetchHandoverList(shippingUnitId)
+                })
+                .catch((error) => {
+                    const message = getErrorMessage(error, 'Không thể bàn giao đơn hàng')
+
+                    setScanError(message)
+                    notify('error', message)
+                })
         },
-        [dispatch, isRemoveMode, requireShippingProvider, scanInputType],
+        [
+            dispatch,
+            isRemoveMode,
+            notify,
+            refetchHandoverList,
+            requireShippingProvider,
+            scanInputType,
+        ],
     )
 
     const handleReturnScan = useCallback(
@@ -113,12 +240,33 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
             if (isRemoveMode) {
                 void dispatch(removeReturnRecord(payload))
+                    .unwrap()
+                    .then(() => {
+                        notify('success', `Đã xóa đơn hoàn ${code}`)
+                    })
+                    .catch((error) => {
+                        const message = getErrorMessage(error, 'Không thể xóa đơn hoàn')
+
+                        setScanError(message)
+                        notify('error', message)
+                    })
+
                 return
             }
 
             void dispatch(loadReturnDetail(payload))
+                .unwrap()
+                .then(() => {
+                    notify('info', `Đã tải đơn hoàn ${code}`)
+                })
+                .catch((error) => {
+                    const message = getErrorMessage(error, `Không tìm thấy đơn hoàn ${code}`)
+
+                    setScanError(message)
+                    notify('error', message)
+                })
         },
-        [dispatch, isRemoveMode, requireShippingProvider, scanInputType],
+        [dispatch, isRemoveMode, notify, requireShippingProvider, scanInputType],
     )
 
     const handleScan = useCallback(
@@ -144,11 +292,15 @@ export function useScanProcessor(): IUseScanProcessorResult {
                     handleReturnScan(code)
                     return
 
-                case 'NONE':
-                    setScanError('Vui lòng chọn chế độ làm việc trước khi quét')
+                case 'NONE': {
+                    const message = 'Vui lòng chọn chế độ làm việc trước khi quét'
+
+                    setScanError(message)
+                    notify('error', message)
+                }
             }
         },
-        [handleHandoverScan, handlePackingScan, handleReturnScan, workMode],
+        [handleHandoverScan, handlePackingScan, handleReturnScan, notify, workMode],
     )
 
     return {

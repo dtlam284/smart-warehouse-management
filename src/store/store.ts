@@ -7,6 +7,7 @@ import warehouseReducer from './slices/warehouseSlice'
 import packingReducer from './slices/packingSlice'
 import handoverReducer from './slices/handoverSlice'
 import returnReducer from './slices/returnSlice'
+import notificationReducer from '@/store/slices/notificationSlice'
 
 //#region config & root reducer
 const persistConfig = {
@@ -22,6 +23,7 @@ const rootReducer = combineReducers({
     packing: packingReducer,
     handover: handoverReducer,
     returnDelivery: returnReducer,
+    notification: notificationReducer
 })
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)

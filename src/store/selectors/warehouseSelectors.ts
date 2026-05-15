@@ -5,7 +5,7 @@ export const selectWarehouseState = (state: RootState) => state.warehouse
 
 export const selectWarehouseOperationConfig = (state: RootState) => state.warehouse.operationConfig
 
-export const selectShippingProviders = (state: RootState) => state.warehouse.providers
+export const selectShippingProviders = (state: RootState) => state.warehouse.providers ?? []
 //#endregion base selectors
 
 //#region config selectors

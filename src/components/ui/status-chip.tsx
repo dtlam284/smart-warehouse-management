@@ -32,7 +32,7 @@ export function StatusChip({ status, label, className, ...props }: IStatusChipPr
     return (
         <span
             className={cn(
-                'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+                'inline-flex min-w-[92px] items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
                 statusClass[status],
                 className,
             )}

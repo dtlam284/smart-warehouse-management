@@ -8,20 +8,44 @@ import {
     selectPackingError,
     selectPackingScannedSKUs,
     selectScannedProgress,
+    selectPackingActiveScanPayload,
 } from '@/store/selectors/packingSelectors'
 import { 
     clearActivePackingDetail, 
-    completePacking 
+    completePacking,
+    fetchPackingList
 } from '@/store/slices/packingSlice'
 import { PackingEmptyPanel } from './PackingEmptyPanel'
 import { PackingSKUItem } from './PackingSKUItem'
+import { showNotification } from '@/store/slices/notificationSlice'
+import { selectPackingFilters } from '@/store/selectors/packingSelectors'
+import type {
+    IUpdatePackingRequest,
+    IGetPackageDetailsRequest,
+} from '@/models/packing/PackingDTO'
+
+//#region helpers
+function buildCompletePackingPayload(
+    payload: IGetPackageDetailsRequest,
+): IUpdatePackingRequest {
+    return {
+        DeliveryCodes: payload.DeliveryCode ? [payload.DeliveryCode] : undefined,
+        PackageCode: payload.PackageCode,
+        OrderCode: payload.OrderCode,
+        OrderCodeRef: payload.OrderCodeRef,
+        Type: payload.Type,
+    }
+}
+//#endregion helpers
 
 //#region component
 export function PackingActivePanel() {
     const dispatch = useAppDispatch()
 
     const activeDetail = useAppSelector(selectPackingActiveDetail)
+    const activeScanPayload = useAppSelector(selectPackingActiveScanPayload)
     const scannedSKUs = useAppSelector(selectPackingScannedSKUs)
+    const packingFilters = useAppSelector(selectPackingFilters)
     const progress = useAppSelector(selectScannedProgress)
     const isAllItemsHandled = useAppSelector(selectIsAllItemsHandled)
     const isLoadingDetail = useAppSelector(selectIsLoadingPackageDetails)
@@ -32,16 +56,40 @@ export function PackingActivePanel() {
         progress.total > 0 ? Math.round((progress.scanned / progress.total) * 100) : 0
 
     const handleCompletePacking = () => {
-        if (!activeDetail || !isAllItemsHandled) {
+        if (!activeDetail || !activeScanPayload || !isAllItemsHandled) {
             return
         }
 
-        void dispatch(
-            completePacking({
-                DeliveryCodes: [activeDetail.Code],
-                Type: 'DELIVERYCODE',
-            }),
-        )
+        void dispatch(completePacking(buildCompletePackingPayload(activeScanPayload)))
+            .unwrap()
+            .then(() => {
+                dispatch(
+                    showNotification({
+                        type: 'success',
+                        message: `Đóng gói ${activeDetail.Code} thành công`,
+                    }),
+                )
+
+                void dispatch(
+                    fetchPackingList({
+                        ...packingFilters,
+                        PageIndex: 0,
+                    }),
+                )
+            })
+            .catch((error) => {
+                dispatch(
+                    showNotification({
+                        type: 'error',
+                        message:
+                            typeof error === 'string'
+                                ? error
+                                : error instanceof Error
+                                ? error.message
+                                : 'Không thể hoàn thành đóng gói',
+                    }),
+                )
+            })
     }
 
     return (
@@ -104,13 +152,17 @@ export function PackingActivePanel() {
                     </div>
 
                     <div className="space-y-2">
-                        {activeDetail.PackageDetails.map((item) => (
-                            <PackingSKUItem
-                                key={item.ListingPropertyCode}
-                                item={item}
-                                scannedCount={scannedSKUs[item.ListingPropertyCode] ?? 0}
-                            />
-                        ))}
+                        {activeDetail.PackageDetails.map((item) => {
+                            const scannedCount = scannedSKUs[item.ListingPropertyCode] ?? 0
+
+                            return (
+                                <PackingSKUItem
+                                    key={item.ListingPropertyCode}
+                                    item={item}
+                                    scannedCount={scannedCount}
+                                />
+                            )
+                        })}
                     </div>
 
                     <ErrorMessage message={error} />

@@ -2,12 +2,12 @@ import { createSlice } from '@reduxjs/toolkit'
 import { warehouseService } from '@/services/warehouse/warehouseService'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
 import { toErrorMessage } from './sliceUtils'
-import type { ShippingProvider, WarehouseOperationConfig } from '@/models/warehouse/WarehouseInterface'
+import type { IShippingProvider, IWarehouseOperationConfig } from '@/models/warehouse/WarehouseInterface'
 
 //#region states
 export interface IWarehouseState {
-    operationConfig: WarehouseOperationConfig | null
-    providers: ShippingProvider[]
+    operationConfig: IWarehouseOperationConfig | null
+    providers: IShippingProvider[]
     isLoadingConfig: boolean
     isLoadingProviders: boolean
     configError: string | null
@@ -83,7 +83,7 @@ const warehouseSlice = createSlice({
             })
             .addCase(loadShippingProviders.fulfilled, (state, action) => {
                 state.isLoadingProviders = false
-                state.providers = action.payload
+                state.providers = Array.isArray(action.payload) ? action.payload : []
             })
             .addCase(loadShippingProviders.rejected, (state, action) => {
                 state.isLoadingProviders = false

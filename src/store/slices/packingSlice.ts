@@ -49,6 +49,7 @@ const defaultFilters: IPackingFilters = {
 
 export interface IPackingState {
     activeDetail: IPackingDetail | null
+    activeScanPayload: IGetPackageDetailsRequest | null
     scannedSKUs: Record<string, number>
     processedList: IPackingRecord[]
     totalRows: number
@@ -64,6 +65,7 @@ export interface IPackingState {
 
 const initialState: IPackingState = {
     activeDetail: null,
+    activeScanPayload: null,
     scannedSKUs: {},
     processedList: [],
     totalRows: 0,
@@ -175,6 +177,7 @@ const packingSlice = createSlice({
 
         clearActivePackingDetail(state) {
             state.activeDetail = null
+            state.activeScanPayload = null
             state.scannedSKUs = {}
             state.error = null
         },
@@ -203,11 +206,15 @@ const packingSlice = createSlice({
             .addCase(loadPackageDetails.fulfilled, (state, action) => {
                 state.isLoadingDetail = false
                 state.activeDetail = action.payload
+                state.activeScanPayload = action.meta.arg
                 state.scannedSKUs = {}
             })
             .addCase(loadPackageDetails.rejected, (state, action) => {
                 state.isLoadingDetail = false
-                state.error = action.payload ?? 'Không thể tải chi tiết kiện cần đóng gói'
+                state.error = action.payload ?? 'Không thể tải thông tin kiện'
+                state.activeDetail = null
+                state.activeScanPayload = null
+                state.scannedSKUs = {}
             })
             .addCase(completePacking.pending, (state) => {
                 state.isUpdating = true
@@ -216,6 +223,7 @@ const packingSlice = createSlice({
             .addCase(completePacking.fulfilled, (state, action) => {
                 state.isUpdating = false
                 state.activeDetail = null
+                state.activeScanPayload = null
                 state.scannedSKUs = {}
                 state.processedList = prependPackingRecords(state.processedList, action.payload)
                 state.totalRows += action.payload.length

@@ -14,6 +14,8 @@ export const selectPackingState = (state: RootState) => state.packing
 
 export const selectPackingActiveDetail = (state: RootState) => state.packing.activeDetail
 
+export const selectPackingActiveScanPayload = (state: RootState) => state.packing.activeScanPayload
+
 export const selectPackingScannedSKUs = (state: RootState) => state.packing.scannedSKUs
 
 export const selectPackingProcessedList = (state: RootState) => state.packing.processedList

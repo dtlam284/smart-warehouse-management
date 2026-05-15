@@ -11,15 +11,20 @@ export type GetConfigRequest = {
     Key?: string
 }
 
-export interface WarehouseOperationConfig {
+export interface IWarehouseOperationConfig {
     HasLayout: boolean
 }
 
-export interface ShippingProvider {
+export interface IShippingProvider {
     Id: string
     Name: string
+    Code?: string
+    LadingCode?: string
 }
 
-export interface ShippingProvidersResponse {
-    Result: ShippingProvider[]
+export interface IShippingProvidersResponse {
+    Code?: number
+    Message?: string
+    Data?: IShippingProvider[]
+    Result: IShippingProvider[]
 }
