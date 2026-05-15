@@ -31,6 +31,7 @@ export interface IPackingFilters {
     OrderCode?: string
     PackageCode?: string
     OrderCodeRef?: string
+    ShippingUnitId?: string
 }
 
 export interface IPackingStats {
