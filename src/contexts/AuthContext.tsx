@@ -1,9 +1,10 @@
 import React from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { authService } from '@/services/auth/authService'
 import { env } from '@/config/env'
-import { ApiError, queryKeys } from '@/services/core'
-import { IAdminUser } from '@/models/account'
+import { queryKeys } from '@/services/core'
+import { clearPersistedAuthTokens, getActiveAuthToken } from '@/services/core/authTokenPersistence'
+import type { IAdminUser } from '@/models/account'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
@@ -19,32 +20,13 @@ interface AuthContextValue {
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 
 const hasStoredSession = (): boolean => {
-    const tokens = authService.getStoredTokens()
-    return Boolean(tokens?.accessToken && tokens.refreshToken)
+    return Boolean(getActiveAuthToken())
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const queryClient = useQueryClient()
     const [hasSession, setHasSession] = React.useState<boolean>(() => hasStoredSession())
-
-    const meQuery = useQuery<IAdminUser | null>({
-        queryKey: queryKeys.auth.me,
-        queryFn: async () => {
-            try {
-                return await authService.getMe()
-            } catch (error) {
-                if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-                    authService.clearStoredTokens()
-                    setHasSession(false)
-                    queryClient.setQueryData(queryKeys.auth.me, null)
-                    return null
-                }
-
-                throw error
-            }
-        },
-        enabled: hasSession,
-    })
+    const [error, setError] = React.useState<unknown>(null)
 
     React.useEffect(() => {
         const onStorageChange = (event: StorageEvent) => {
@@ -53,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            if (event.key === env.tokenStorageKey) {
+            if (event.key === env.tokenStorageKey || event.key === `${env.tokenStorageKey}.root`) {
                 setHasSession(hasStoredSession())
             }
         }
@@ -71,53 +53,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return null
         }
 
-        const result = await meQuery.refetch()
-        return result.data ?? null
-    }, [meQuery, queryClient])
+        return null
+    }, [queryClient])
 
     const logout = React.useCallback(async (): Promise<void> => {
         const activeSession = hasStoredSession()
 
-        if (activeSession) {
-            try {
+        try {
+            if (activeSession) {
                 await authService.logout()
-            } catch {
-                authService.clearStoredTokens()
+            } else {
+                clearPersistedAuthTokens()
             }
-        } else {
-            authService.clearStoredTokens()
+        } catch (caughtError) {
+            setError(caughtError)
+            clearPersistedAuthTokens()
+        } finally {
+            setHasSession(false)
+            queryClient.setQueryData(queryKeys.auth.me, null)
         }
-
-        setHasSession(false)
-        queryClient.setQueryData(queryKeys.auth.me, null)
     }, [queryClient])
 
-    const status: AuthStatus = React.useMemo(() => {
-        if (!hasSession) {
-            return 'unauthenticated'
-        }
-
-        if (meQuery.isPending) {
-            return 'loading'
-        }
-
-        if (meQuery.data) {
-            return 'authenticated'
-        }
-
-        return 'unauthenticated'
-    }, [hasSession, meQuery.data, meQuery.isPending])
+    const status: AuthStatus = hasSession ? 'authenticated' : 'unauthenticated'
 
     const value = React.useMemo<AuthContextValue>(
         () => ({
-            user: meQuery.data ?? null,
+            user: null,
             status,
             isAuthenticated: status === 'authenticated',
-            error: meQuery.error,
+            error,
             refreshProfile,
             logout,
         }),
-        [logout, meQuery.data, meQuery.error, refreshProfile, status],
+        [error, logout, refreshProfile, status],
     )
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

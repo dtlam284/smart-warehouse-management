@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { authService } from '@/services/auth/authService'
 import { tenantService } from '@/services/tenant/tenantService'
-import { apiClient } from '@/services/core/apiClient'
+import { clearPersistedAuthTokens } from '@/services/core/authTokenPersistence'
 import { createAppAsyncThunk } from '@/store/thunkTypes'
 import { FunctionalPathEnum } from '@/models/tenant/TenantInterface'
 import { IAdminUser } from '@/models/account/AccountInterface'
@@ -17,6 +17,7 @@ import type {
     IAuthForgotPasswordResponse,
     IAuthLoginRequest,
     IAuthLoginResponse,
+    IAuthMeResponse,
     IAuthRegisterRequest,
     IAuthRegisterResponse,
     IAuthResendOtpRequest,
@@ -59,6 +60,12 @@ export interface IAuthState {
 }
 
 export type AuthState = IAuthState
+
+interface ILoginThunkPayload extends IAuthLoginResponse {
+    shouldSkipTenantSelection?: boolean
+    autoSelectedTenant?: ITenantItem | null
+    autoLoadedTenants?: ITenantItem[]
+}
 //#endregion types
 
 //#region states
@@ -163,17 +170,95 @@ const setSettled = (state: IAuthState): void => {
 }
 
 const clearStoredAuthTokens = (): void => {
-    apiClient.clearTokens()
+    clearPersistedAuthTokens()
+}
+
+const getEnvString = (value: string | undefined): string => {
+    return value?.trim() ?? ''
+}
+
+const getTargetTenantCode = (): string => {
+    return getEnvString(import.meta.env.VITE_AUTH_LOGIN_CODE)
+}
+
+const getTargetTenantHost = (): string => {
+    return getEnvString(import.meta.env.VITE_AUTH_LOGIN_HOST)
+}
+
+const shouldUseTargetedTenantLogin = (): boolean => {
+    return getTargetTenantCode().length > 0 && getTargetTenantHost().length > 0
+}
+
+const normalizeComparableCode = (value: unknown): string => {
+    return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
+const getTenantCode = (tenant: ITenantItem): string => {
+    const tenantRecord = tenant as unknown as Record<string, unknown>
+
+    return (
+        normalizeComparableCode(tenantRecord.code) ||
+        normalizeComparableCode(tenantRecord.Code)
+    )
+}
+
+const toTenantItems = (payload: ITenantListResponse | ITenantItem[]): ITenantItem[] => {
+    return Array.isArray(payload) ? payload : (payload.items ?? [])
+}
+
+const findTargetTenant = (tenants: ITenantItem[]): ITenantItem | undefined => {
+    const targetCode = normalizeComparableCode(getTargetTenantCode())
+
+    return tenants.find((tenant) => getTenantCode(tenant) === targetCode)
 }
 //#endregion helpers
 
 //#region thunks
-export const loginThunk = createAppAsyncThunk<IAuthLoginResponse, IAuthLoginRequest>(
+export const loginThunk = createAppAsyncThunk<ILoginThunkPayload, IAuthLoginRequest>(
     'auth/login',
     async (payload, { rejectWithValue }) => {
         try {
-            return await authService.login(payload)
+            const loginResponse = await authService.login(payload)
+
+            if (!shouldUseTargetedTenantLogin()) {
+                return loginResponse
+            }
+
+            const tenantListResponse = await tenantService.listTenants()
+            const tenants = toTenantItems(tenantListResponse)
+            const targetTenant = findTargetTenant(tenants)
+
+            if (!targetTenant) {
+                clearStoredAuthTokens()
+
+                return rejectWithValue(
+                    `Tenant ${getTargetTenantCode()} was not found for this account`,
+                )
+            }
+
+            if (!targetTenant.ClientId || !targetTenant.ClientSecret) {
+                clearStoredAuthTokens()
+
+                return rejectWithValue(
+                    `Tenant ${getTargetTenantCode()} is missing ClientId or ClientSecret`,
+                )
+            }
+
+            await tenantService.selectTenant({
+                tenantId: targetTenant.id,
+                ClientId: targetTenant.ClientId,
+                ClientSecret: targetTenant.ClientSecret,
+            })
+
+            return {
+                ...loginResponse,
+                shouldSkipTenantSelection: true,
+                autoSelectedTenant: targetTenant,
+                autoLoadedTenants: tenants,
+            }
         } catch (error) {
+            clearStoredAuthTokens()
+
             return rejectWithValue(toErrorMessage(error, 'Unable to login'))
         }
     },
@@ -234,7 +319,7 @@ export const resetPasswordThunk = createAppAsyncThunk<
     }
 })
 
-export const fetchMyProfileThunk = createAppAsyncThunk<IAdminUser, void>(
+export const fetchMyProfileThunk = createAppAsyncThunk<IAuthMeResponse, void>(
     'auth/fetchMyProfile',
     async (_, { rejectWithValue }) => {
         try {
@@ -383,13 +468,16 @@ const authSlice = createSlice({
 
                 state.user = action.payload.user ?? state.user
 
-                state.tenants = []
-                state.selectedTenant = null
+                state.tenants = action.payload.autoLoadedTenants ?? []
+                state.selectedTenant = action.payload.autoSelectedTenant ?? null
                 state.agents = []
                 state.selectedAgent = null
                 state.role = null
 
-                state.status = 'needs_tenant'
+                state.status =
+                    action.payload.shouldSkipTenantSelection && action.payload.autoSelectedTenant
+                        ? 'needs_role'
+                        : 'needs_tenant'
                 state.isAuthenticated = false
             })
             .addCase(loginThunk.rejected, (state, action) => {
