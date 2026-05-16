@@ -43,8 +43,9 @@ export function HandoverStatsBar() {
         return (
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <EmptyState
+                    icon='🚚'
                     title="Chưa có thống kê bàn giao"
-                    description="Thống kê sẽ hiển thị sau khi dữ liệu bàn giao được tải."
+                    // description="Thống kê sẽ hiển thị sau khi dữ liệu bàn giao được tải."
                 />
             </section>
         )

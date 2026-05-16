@@ -34,7 +34,7 @@ export function ReturnStatsBar() {
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <EmptyState
                     title="Chưa có thống kê hàng hoàn"
-                    description="Thống kê sẽ hiển thị sau khi dữ liệu hàng hoàn được tải."
+                    // description="Thống kê sẽ hiển thị sau khi dữ liệu hàng hoàn được tải."
                 />
             </section>
         )

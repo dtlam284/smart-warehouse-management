@@ -95,9 +95,9 @@ export function ReturnRecordList() {
                     <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                         Đơn hoàn đã xác nhận hôm nay
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    {/* <p className="mt-1 text-sm text-slate-500">
                         Record mới nhất được đưa lên đầu danh sách sau khi xác nhận thành công.
-                    </p>
+                    </p> */}
                 </div>
 
                 <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
