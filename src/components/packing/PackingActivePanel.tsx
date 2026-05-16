@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Button, ErrorMessage, Spinner } from '@/components/ui'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -5,23 +6,22 @@ import {
     selectIsLoadingPackageDetails,
     selectIsUpdatingPacking,
     selectPackingActiveDetail,
+    selectPackingActiveScanPayload,
     selectPackingError,
     selectPackingScannedSKUs,
     selectScannedProgress,
-    selectPackingActiveScanPayload,
 } from '@/store/selectors/packingSelectors'
-import { 
-    clearActivePackingDetail, 
+import {
+    clearActivePackingDetail,
+    clearPackingError,
     completePacking,
-    fetchPackingList
 } from '@/store/slices/packingSlice'
 import { PackingEmptyPanel } from './PackingEmptyPanel'
 import { PackingSKUItem } from './PackingSKUItem'
 import { showNotification } from '@/store/slices/notificationSlice'
-import { selectPackingFilters } from '@/store/selectors/packingSelectors'
 import type {
-    IUpdatePackingRequest,
     IGetPackageDetailsRequest,
+    IUpdatePackingRequest,
 } from '@/models/packing/PackingDTO'
 
 //#region helpers
@@ -36,6 +36,18 @@ function buildCompletePackingPayload(
         Type: payload.Type,
     }
 }
+
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'string' && error.trim().length > 0) {
+        return error
+    }
+
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message
+    }
+
+    return fallback
+}
 //#endregion helpers
 
 //#region component
@@ -45,7 +57,6 @@ export function PackingActivePanel() {
     const activeDetail = useAppSelector(selectPackingActiveDetail)
     const activeScanPayload = useAppSelector(selectPackingActiveScanPayload)
     const scannedSKUs = useAppSelector(selectPackingScannedSKUs)
-    const packingFilters = useAppSelector(selectPackingFilters)
     const progress = useAppSelector(selectScannedProgress)
     const isAllItemsHandled = useAppSelector(selectIsAllItemsHandled)
     const isLoadingDetail = useAppSelector(selectIsLoadingPackageDetails)
@@ -54,6 +65,18 @@ export function PackingActivePanel() {
 
     const progressPercent =
         progress.total > 0 ? Math.round((progress.scanned / progress.total) * 100) : 0
+
+    React.useEffect(() => {
+        if (!error) {
+            return
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dispatch(clearPackingError())
+        }, 3500)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [dispatch, error])
 
     const handleCompletePacking = () => {
         if (!activeDetail || !activeScanPayload || !isAllItemsHandled) {
@@ -69,24 +92,12 @@ export function PackingActivePanel() {
                         message: `Đóng gói ${activeDetail.Code} thành công`,
                     }),
                 )
-
-                void dispatch(
-                    fetchPackingList({
-                        ...packingFilters,
-                        PageIndex: 0,
-                    }),
-                )
             })
             .catch((error) => {
                 dispatch(
                     showNotification({
                         type: 'error',
-                        message:
-                            typeof error === 'string'
-                                ? error
-                                : error instanceof Error
-                                ? error.message
-                                : 'Không thể hoàn thành đóng gói',
+                        message: getErrorMessage(error, 'Không thể hoàn thành đóng gói'),
                     }),
                 )
             })
