@@ -6,23 +6,20 @@ import {
     selectIsConfirmingReturn,
     selectIsLoadingReturnDetail,
     selectReturnError,
+    selectReturnFilters,
 } from '@/store/selectors/returnSelectors'
-import { 
-    selectWarehouseHasLayout 
-} from '@/store/selectors/warehouseSelectors'
+import { selectWarehouseHasLayout } from '@/store/selectors/warehouseSelectors'
 import {
     clearActiveReturn,
+    clearReturnError,
     confirmReturn,
     confirmReturnNoLayout,
+    fetchReturnList,
+    loadReturnStats,
 } from '@/store/slices/returnSlice'
-import { 
-    getDefaultQuantities, 
-    validateReturnQuantity
-} from '@/validations/returnValidation'
-import { 
-    ContainerPickerModal, 
-    IReturnContainerValue 
-} from './ContainerPickerModal'
+import { showNotification } from '@/store/slices/notificationSlice'
+import { getDefaultQuantities, validateReturnQuantity } from '@/validations/returnValidation'
+import { ContainerPickerModal, type IReturnContainerValue } from './ContainerPickerModal'
 import { ReturnEmptyPanel } from './ReturnEmptyPanel'
 import { ReturnItemRow } from './ReturnItemRow'
 import { ReturnTypeSelector } from './ReturnTypeSelector'
@@ -48,7 +45,19 @@ interface IReturnFormProps {
 
 //#region helpers
 function getItemKey(item: IReturnProduct): string {
-    return item.GroupServiceId
+    return item.GroupServiceId || item.GroupServiceCode
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'string' && error.trim().length > 0) {
+        return error
+    }
+
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message
+    }
+
+    return fallback
 }
 
 function buildInitialQuantities(activeReturn: IReturnDetail): ReturnQuantityMap {
@@ -149,6 +158,7 @@ function validateReturnForm(
 //#region form
 function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFormProps) {
     const dispatch = useAppDispatch()
+    const returnFilters = useAppSelector(selectReturnFilters)
 
     const [returnType, setReturnType] = React.useState<ReturnType | null>(null)
     const [quantities, setQuantities] = React.useState<ReturnQuantityMap>(() =>
@@ -158,6 +168,55 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
     const [formError, setFormError] = React.useState<string | null>('Vui lòng chọn loại hoàn trả')
     const [containerModalOpen, setContainerModalOpen] = React.useState(false)
     const [pendingRequest, setPendingRequest] = React.useState<IConfirmReturnRequest | null>(null)
+
+    React.useEffect(() => {
+        setReturnType(null)
+        setQuantities(buildInitialQuantities(activeReturn))
+        setValidationErrors({})
+        setFormError('Vui lòng chọn loại hoàn trả')
+        setContainerModalOpen(false)
+        setPendingRequest(null)
+    }, [activeReturn])
+
+    const refreshReturnOverview = React.useCallback(() => {
+        void dispatch(
+            fetchReturnList({
+                PageIndex: 1,
+                PageSize: returnFilters.PageSize ?? 10,
+                ShippingUnitId: activeReturn.ShippingUnitId || undefined,
+            }),
+        )
+
+        void dispatch(loadReturnStats({}))
+    }, [activeReturn.ShippingUnitId, dispatch, returnFilters.PageSize])
+
+    const handleReturnSuccess = React.useCallback(() => {
+        setContainerModalOpen(false)
+        setPendingRequest(null)
+        setValidationErrors({})
+        setFormError(null)
+
+        dispatch(
+            showNotification({
+                type: 'success',
+                message: `Xác nhận hoàn ${activeReturn.OrderCode || activeReturn.DeliveryCode} thành công`,
+            }),
+        )
+
+        refreshReturnOverview()
+    }, [activeReturn.DeliveryCode, activeReturn.OrderCode, dispatch, refreshReturnOverview])
+
+    const handleReturnFailure = React.useCallback(
+        (error: unknown) => {
+            dispatch(
+                showNotification({
+                    type: 'error',
+                    message: getErrorMessage(error, 'Không thể xác nhận hàng hoàn'),
+                }),
+            )
+        },
+        [dispatch],
+    )
 
     const handleReturnTypeChange = (nextType: ReturnType) => {
         setReturnType(nextType)
@@ -191,6 +250,10 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
 
             return nextErrors
         })
+
+        if (formError) {
+            setFormError(null)
+        }
     }
 
     const handleSubmit = () => {
@@ -212,6 +275,9 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
         }
 
         void dispatch(confirmReturnNoLayout(request))
+            .unwrap()
+            .then(handleReturnSuccess)
+            .catch(handleReturnFailure)
     }
 
     const handleContainerConfirm = (container: IReturnContainerValue) => {
@@ -227,43 +293,49 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
             }),
         )
             .unwrap()
-            .then(() => {
-                setContainerModalOpen(false)
-                setPendingRequest(null)
-            })
-            .catch(() => {
-                // slice keeps activeReturn and exposes error
-            })
+            .then(handleReturnSuccess)
+            .catch(handleReturnFailure)
     }
 
+    //#region render
     return (
         <>
             <div className="space-y-4">
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                     <div className="grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-4">
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">Mã đơn</div>
-                            <div className="font-mono font-semibold text-blue-700">{activeReturn.OrderCode}</div>
-                        </div>
-
-                        <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">Mã kiện</div>
-                            <div className="font-mono font-semibold text-purple-700">
-                                {activeReturn.DeliveryCode}
+                            <div className="text-xs font-semibold uppercase text-slate-400">
+                                Mã đơn
+                            </div>
+                            <div className="font-mono font-semibold text-blue-700">
+                                {activeReturn.OrderCode || '-'}
                             </div>
                         </div>
 
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">Khách hàng</div>
+                            <div className="text-xs font-semibold uppercase text-slate-400">
+                                Mã kiện
+                            </div>
+                            <div className="font-mono font-semibold text-purple-700">
+                                {activeReturn.DeliveryCode || '-'}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="text-xs font-semibold uppercase text-slate-400">
+                                Khách hàng
+                            </div>
                             <div className="font-semibold text-slate-700">
                                 {activeReturn.CustomerName || '-'}
                             </div>
                         </div>
 
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">Đơn vị VC</div>
+                            <div className="text-xs font-semibold uppercase text-slate-400">
+                                Đơn vị VC
+                            </div>
                             <div className="font-semibold text-slate-700">
-                                {activeReturn.ShippingUnitName}
+                                {activeReturn.ShippingUnitName || '-'}
                             </div>
                         </div>
                     </div>
@@ -350,17 +422,33 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
             />
         </>
     )
+    //#endregion render
 }
 //#endregion form
 
 //#region component
 export function ReturnActivePanel() {
+    const dispatch = useAppDispatch()
+
     const activeReturn = useAppSelector(selectActiveReturn)
     const isLoadingDetail = useAppSelector(selectIsLoadingReturnDetail)
     const isConfirming = useAppSelector(selectIsConfirmingReturn)
     const error = useAppSelector(selectReturnError)
     const hasLayout = useAppSelector(selectWarehouseHasLayout)
 
+    React.useEffect(() => {
+        if (!error) {
+            return
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dispatch(clearReturnError())
+        }, 3500)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [dispatch, error])
+
+    //#region render
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
@@ -384,7 +472,7 @@ export function ReturnActivePanel() {
 
             {!isLoadingDetail && activeReturn ? (
                 <ReturnForm
-                    key={activeReturn.DeliveryCode}
+                    key={activeReturn.DeliveryCode || activeReturn.OrderCode}
                     activeReturn={activeReturn}
                     hasLayout={hasLayout}
                     isConfirming={isConfirming}
@@ -393,5 +481,6 @@ export function ReturnActivePanel() {
             ) : null}
         </section>
     )
+    //#endregion render
 }
 //#endregion component

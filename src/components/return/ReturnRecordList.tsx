@@ -1,4 +1,6 @@
+import * as React from 'react'
 import { Badge, Button, ErrorMessage, Spinner } from '@/components/ui'
+import { cn } from '@/components/ui/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     selectIsConfirmingReturn,
@@ -9,12 +11,15 @@ import {
     selectReturnRecords,
     selectReturnTotalRows,
 } from '@/store/selectors/returnSelectors'
-import { 
-    fetchReturnList, 
-    setReturnFilters 
+import {
+    clearReturnError,
+    fetchReturnList,
+    setReturnFilters,
 } from '@/store/slices/returnSlice'
-import { cn } from '@/components/ui/utils'
-import type { IReturnFilters, ReturnType } from '@/models/return/ReturnInterface'
+import type { 
+    IReturnFilters, 
+    ReturnType 
+} from '@/models/return/ReturnInterface'
 
 //#region helpers
 function formatDateTime(value: string): string {
@@ -74,31 +79,60 @@ export function ReturnRecordList() {
     const isRemoving = useAppSelector(selectIsRemovingReturn)
     const error = useAppSelector(selectReturnError)
 
-    const currentPage = filters.PageIndex + 1
-    const totalPages = getTotalPages(totalRows, filters.PageSize)
+    const currentPage = filters.PageIndex ?? 1
+    const pageSize = filters.PageSize ?? 10
+    const totalPages = getTotalPages(totalRows, pageSize)
     const isBusy = isFetching || isConfirming || isRemoving
+
+    const isFirstPage = currentPage <= 1
+    const isLastPage = currentPage >= totalPages
+
+    React.useEffect(() => {
+        if (!error) {
+            return
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dispatch(clearReturnError())
+        }, 3500)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [dispatch, error])
 
     const handlePageChange = (nextPageIndex: number) => {
         const nextFilters: IReturnFilters = {
             ...filters,
             PageIndex: nextPageIndex,
+            PageSize: pageSize,
         }
 
         dispatch(setReturnFilters(nextFilters))
         void dispatch(fetchReturnList(nextFilters))
     }
 
+    const handlePreviousPage = () => {
+        if (isFirstPage) {
+            return
+        }
+
+        handlePageChange(Math.max(1, currentPage - 1))
+    }
+
+    const handleNextPage = () => {
+        if (isLastPage) {
+            return
+        }
+
+        handlePageChange(currentPage + 1)
+    }
+
+    //#region render
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-                <div>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Đơn hoàn đã xác nhận hôm nay
-                    </h2>
-                    {/* <p className="mt-1 text-sm text-slate-500">
-                        Record mới nhất được đưa lên đầu danh sách sau khi xác nhận thành công.
-                    </p> */}
-                </div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Đơn hoàn đã xác nhận hôm nay
+                </h2>
 
                 <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
                     {totalRows} đơn
@@ -141,7 +175,7 @@ export function ReturnRecordList() {
 
                         <tbody className="divide-y divide-slate-200">
                             {records.map((record, index) => {
-                                const isFirstRowOnFirstPage = filters.PageIndex === 0 && index === 0
+                                const isFirstRowOnFirstPage = currentPage === 1 && index === 0
 
                                 return (
                                     <tr
@@ -152,7 +186,7 @@ export function ReturnRecordList() {
                                         )}
                                     >
                                         <td className="px-3 py-2 text-slate-500">
-                                            {filters.PageIndex * filters.PageSize + index + 1}
+                                            {(currentPage - 1) * pageSize + index + 1}
                                         </td>
 
                                         <td className="px-3 py-2 text-slate-600">
@@ -201,8 +235,8 @@ export function ReturnRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={filters.PageIndex <= 0 || isBusy}
-                        onClick={() => handlePageChange(filters.PageIndex - 1)}
+                        disabled={isFirstPage || isBusy}
+                        onClick={handlePreviousPage}
                     >
                         Trước
                     </Button>
@@ -210,8 +244,8 @@ export function ReturnRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={currentPage >= totalPages || isBusy}
-                        onClick={() => handlePageChange(filters.PageIndex + 1)}
+                        disabled={isLastPage || isBusy}
+                        onClick={handleNextPage}
                     >
                         Sau
                     </Button>
@@ -219,5 +253,6 @@ export function ReturnRecordList() {
             </div>
         </section>
     )
+    //#endregion render
 }
 //#endregion component

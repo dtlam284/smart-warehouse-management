@@ -8,11 +8,11 @@ import type {
     IGetReturnStatsRequest,
     IRemoveReturnRequest,
 } from '@/models/return/ReturnDTO'
-import type { 
-    IReturnDetail, 
-    IReturnFilters, 
-    IReturnRecord, 
-    IReturnStats 
+import type {
+    IReturnDetail,
+    IReturnFilters,
+    IReturnRecord,
+    IReturnStats,
 } from '@/models/return/ReturnInterface'
 
 //#region helpers
@@ -36,13 +36,22 @@ function hasContainer(request: Pick<IConfirmReturnRequest, 'ContainerId' | 'Cont
     return request.ContainerId > 0 && request.ContainerCode.trim().length > 0
 }
 
-function getDeliveryCodesFromRecords(records: IReturnRecord[]): string[] {
-    return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
+function getRecordKey(record: IReturnRecord): string {
+    return record.Id || record.DeliveryCode || record.PackageCode || record.OrderCode
 }
 
-function prependReturnRecords(currentRecords: IReturnRecord[], newRecords: IReturnRecord[]): IReturnRecord[] {
-    const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
-    const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
+function getRecordKeys(records: IReturnRecord[]): string[] {
+    return records.map(getRecordKey).filter((key) => key.trim().length > 0)
+}
+
+function prependReturnRecords(
+    currentRecords: IReturnRecord[],
+    newRecords: IReturnRecord[],
+): IReturnRecord[] {
+    const newRecordKeys = new Set(getRecordKeys(newRecords))
+    const filteredCurrentRecords = currentRecords.filter(
+        (record) => !newRecordKeys.has(getRecordKey(record)),
+    )
 
     return [...newRecords, ...filteredCurrentRecords]
 }
@@ -50,8 +59,8 @@ function prependReturnRecords(currentRecords: IReturnRecord[], newRecords: IRetu
 
 //#region states
 const defaultFilters: IReturnFilters = {
-    PageIndex: 0,
-    PageSize: 20,
+    PageIndex: 1,
+    PageSize: 10,
 }
 
 export interface IReturnState {
@@ -216,7 +225,6 @@ const returnSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            //#region load return detail
             .addCase(loadReturnDetail.pending, (state) => {
                 state.isLoadingDetail = true
                 state.error = null
@@ -228,10 +236,9 @@ const returnSlice = createSlice({
             .addCase(loadReturnDetail.rejected, (state, action) => {
                 state.isLoadingDetail = false
                 state.error = action.payload ?? 'Không thể tải chi tiết hàng hoàn'
+                state.activeReturn = null
             })
-            //#endregion load return detail
 
-            //#region confirm return
             .addCase(confirmReturn.pending, (state) => {
                 state.isConfirming = true
                 state.error = null
@@ -239,16 +246,20 @@ const returnSlice = createSlice({
             .addCase(confirmReturn.fulfilled, (state, action) => {
                 state.isConfirming = false
                 state.activeReturn = null
+
+                const beforeCount = state.records.length
+
                 state.records = prependReturnRecords(state.records, action.payload)
-                state.totalRows += action.payload.length
+
+                const addedCount = state.records.length - beforeCount
+
+                state.totalRows = Math.max(state.totalRows + addedCount, state.records.length)
             })
             .addCase(confirmReturn.rejected, (state, action) => {
                 state.isConfirming = false
                 state.error = action.payload ?? 'Không thể xác nhận hàng hoàn'
             })
-            //#endregion confirm return
 
-            //#region confirm return no layout
             .addCase(confirmReturnNoLayout.pending, (state) => {
                 state.isConfirming = true
                 state.error = null
@@ -256,16 +267,20 @@ const returnSlice = createSlice({
             .addCase(confirmReturnNoLayout.fulfilled, (state, action) => {
                 state.isConfirming = false
                 state.activeReturn = null
+
+                const beforeCount = state.records.length
+
                 state.records = prependReturnRecords(state.records, action.payload)
-                state.totalRows += action.payload.length
+
+                const addedCount = state.records.length - beforeCount
+
+                state.totalRows = Math.max(state.totalRows + addedCount, state.records.length)
             })
             .addCase(confirmReturnNoLayout.rejected, (state, action) => {
                 state.isConfirming = false
                 state.error = action.payload ?? 'Không thể xác nhận hàng hoàn không layout'
             })
-            //#endregion confirm return no layout
 
-            //#region remove return record
             .addCase(removeReturnRecord.pending, (state) => {
                 state.isRemoving = true
                 state.error = null
@@ -276,7 +291,9 @@ const returnSlice = createSlice({
                 const removedCodes = new Set(action.payload)
                 const beforeCount = state.records.length
 
-                state.records = state.records.filter((record) => !removedCodes.has(record.DeliveryCode))
+                state.records = state.records.filter((record) => {
+                    return !removedCodes.has(record.DeliveryCode)
+                })
 
                 const removedCount = beforeCount - state.records.length
 
@@ -286,9 +303,7 @@ const returnSlice = createSlice({
                 state.isRemoving = false
                 state.error = action.payload ?? 'Không thể xóa record hàng hoàn'
             })
-            //#endregion remove return record
 
-            //#region fetch return list
             .addCase(fetchReturnList.pending, (state) => {
                 state.isFetchingList = true
                 state.error = null
@@ -297,19 +312,23 @@ const returnSlice = createSlice({
                 state.isFetchingList = false
                 state.records = action.payload.Data
                 state.totalRows = action.payload.TotalRows
-                state.filters = {
-                    ...state.filters,
-                    PageIndex: action.payload.PageIndex,
-                    PageSize: action.payload.PageSize,
+
+                if (
+                    state.filters.PageIndex !== action.payload.PageIndex ||
+                    state.filters.PageSize !== action.payload.PageSize
+                ) {
+                    state.filters = {
+                        ...state.filters,
+                        PageIndex: action.payload.PageIndex,
+                        PageSize: action.payload.PageSize,
+                    }
                 }
             })
             .addCase(fetchReturnList.rejected, (state, action) => {
                 state.isFetchingList = false
                 state.error = action.payload ?? 'Không thể tải danh sách hàng hoàn'
             })
-            //#endregion fetch return list
 
-            //#region load return stats
             .addCase(loadReturnStats.pending, (state) => {
                 state.isLoadingStats = true
                 state.error = null
@@ -322,7 +341,6 @@ const returnSlice = createSlice({
                 state.isLoadingStats = false
                 state.error = action.payload ?? 'Không thể tải thống kê hàng hoàn'
             })
-        //#endregion load return stats
     },
 })
 //#endregion slice

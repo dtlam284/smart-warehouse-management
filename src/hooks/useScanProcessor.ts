@@ -24,9 +24,12 @@ import {
     selectPackingActiveDetail,
     selectPackingScannedSKUs,
 } from '@/store/selectors/packingSelectors'
+import { selectReturnFilters } from '@/store/selectors/returnSelectors'
 import {
     loadReturnDetail,
     removeReturnRecord,
+    loadReturnStats,
+    fetchReturnList
 } from '@/store/slices/returnSlice'
 
 //#region types
@@ -63,6 +66,7 @@ export function useScanProcessor(): IUseScanProcessorResult {
     const activeDetail = useAppSelector(selectPackingActiveDetail)
     const scannedSKUs = useAppSelector(selectPackingScannedSKUs)
     const handoverFilters = useAppSelector(selectHandoverFilters)
+    const returnFilters = useAppSelector(selectReturnFilters)
 
     const [scanError, setScanError] = useState<string | null>(null)
     const scanErrorTimeoutRef = useRef<number | null>(null)
@@ -307,6 +311,16 @@ export function useScanProcessor(): IUseScanProcessorResult {
                         showScanError(message)
                         notify('error', message)
                     })
+
+                void dispatch(
+                    fetchReturnList({
+                        PageIndex: 1,
+                        PageSize: returnFilters.PageSize ?? 10,
+                        ShippingUnitId: shippingUnitId,
+                    }),
+                    )
+
+                void dispatch(loadReturnStats({}))
 
                 return
             }

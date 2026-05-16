@@ -1,16 +1,10 @@
 import * as React from 'react'
-import { 
-    ShippingProviderSelect
-} from '@/components/shared/ShippingProviderSelect'
+import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
 import { Button, Input } from '@/components/ui'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectReturnFilters } from '@/store/selectors/returnSelectors'
 import { selectShippingProviders } from '@/store/selectors/warehouseSelectors'
-import {
-    fetchReturnList,
-    resetReturnFilters,
-    setReturnFilters,
-} from '@/store/slices/returnSlice'
+import { fetchReturnList, resetReturnFilters, setReturnFilters } from '@/store/slices/returnSlice'
 import type { IReturnFilters } from '@/models/return/ReturnInterface'
 
 //#region component
@@ -27,7 +21,8 @@ export function ReturnFilterBar() {
 
     const buildFilters = (): IReturnFilters => ({
         ...filters,
-        PageIndex: 0,
+        PageIndex: 1,
+        PageSize: filters.PageSize ?? 10,
         Date: date.trim() || undefined,
         DeliveryCode: deliveryCode.trim() || undefined,
         OrderCode: orderCode.trim() || undefined,
@@ -43,8 +38,8 @@ export function ReturnFilterBar() {
 
     const handleResetFilters = () => {
         const resetFilters: IReturnFilters = {
-            PageIndex: 0,
-            PageSize: filters.PageSize,
+            PageIndex: 1,
+            PageSize: filters.PageSize ?? 10,
         }
 
         setDate('')
@@ -55,7 +50,8 @@ export function ReturnFilterBar() {
         dispatch(resetReturnFilters())
         void dispatch(fetchReturnList(resetFilters))
     }
-
+    
+    //#region render
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
@@ -110,5 +106,6 @@ export function ReturnFilterBar() {
             </div>
         </section>
     )
+    //#endregion render
 }
 //#endregion component
