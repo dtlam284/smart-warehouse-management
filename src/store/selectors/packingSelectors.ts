@@ -32,6 +32,9 @@ export const selectIsLoadingPackageDetails = (state: RootState) => state.packing
 
 export const selectIsFetchingPackingList = (state: RootState) => state.packing.isFetchingList
 
+export const selectIsLoadingPackingStats = (state: RootState) => state.packing.isLoadingStats
+
+
 export const selectIsUpdatingPacking = (state: RootState) => state.packing.isUpdating
 
 export const selectIsRemovingPacking = (state: RootState) => state.packing.isRemoving

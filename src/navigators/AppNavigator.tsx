@@ -18,6 +18,12 @@ const WorkplacePage = React.lazy(() =>
     })),
 )
 
+const StatsPage = React.lazy(() =>
+    import('../screens/Stats/StatsPage').then((module) => ({
+        default: module.StatsPage,
+    })),
+)
+
 const TenantSelectionScreen = React.lazy(() =>
     import('../screens/Auth/TenantSelectionScreen').then((module) => ({
         default: module.TenantSelectionScreen,
@@ -121,6 +127,10 @@ export const router = createBrowserRouter([
             {
                 index: true,
                 Component: lazyRoute(WorkplacePage),
+            },
+            {
+                path: 'stats',
+                Component: lazyRoute(StatsPage),
             },
             {
                 path: '*',
