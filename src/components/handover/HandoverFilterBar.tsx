@@ -24,7 +24,7 @@ export function HandoverFilterBar() {
 
     const buildFilters = (): IHandoverFilters => ({
         ...filters,
-        PageIndex: 0,
+        PageIndex: 1,
         Date: date.trim() || undefined,
         DeliveryCode: deliveryCode.trim() || undefined,
         ShippingUnitId: shippingUnitId || undefined,
@@ -39,8 +39,8 @@ export function HandoverFilterBar() {
 
     const handleResetFilters = () => {
         const resetFilters: IHandoverFilters = {
-            PageIndex: 0,
-            PageSize: filters.PageSize,
+            PageIndex: 1,
+            PageSize: filters.PageSize || 10,
         }
 
         setDate('')

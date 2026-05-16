@@ -1,4 +1,6 @@
+import * as React from 'react'
 import { Button, ErrorMessage, Spinner } from '@/components/ui'
+import { cn } from '@/components/ui/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     selectHandoverError,
@@ -9,13 +11,12 @@ import {
     selectIsRemovingHandover,
     selectIsUpdatingHandover,
 } from '@/store/selectors/handoverSelectors'
-import { 
-    fetchHandoverList, 
-    setHandoverFilters 
+import {
+    clearHandoverError,
+    fetchHandoverList,
+    setHandoverFilters,
 } from '@/store/slices/handoverSlice'
-import { cn } from '@/components/ui/utils'
 import type { IHandoverFilters } from '@/models/handover/HandoverInterface'
-
 
 //#region helpers
 function formatDateTime(value: string): string {
@@ -49,18 +50,51 @@ export function HandoverRecordList() {
     const isRemoving = useAppSelector(selectIsRemovingHandover)
     const error = useAppSelector(selectHandoverError)
 
-    const currentPage = filters.PageIndex + 1
-    const totalPages = getTotalPages(totalRows, filters.PageSize)
+    const currentPage = filters.PageIndex ?? 1
+    const pageSize = filters.PageSize ?? 10
+    const totalPages = getTotalPages(totalRows, pageSize)
     const isBusy = isFetching || isUpdating || isRemoving
+
+    const isFirstPage = currentPage <= 1
+    const isLastPage = currentPage >= totalPages
+
+    React.useEffect(() => {
+        if (!error) {
+            return
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dispatch(clearHandoverError())
+        }, 3500)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [dispatch, error])
 
     const handlePageChange = (nextPageIndex: number) => {
         const nextFilters: IHandoverFilters = {
             ...filters,
             PageIndex: nextPageIndex,
+            PageSize: pageSize,
         }
 
         dispatch(setHandoverFilters(nextFilters))
         void dispatch(fetchHandoverList(nextFilters))
+    }
+
+    const handlePreviousPage = () => {
+        if (isFirstPage) {
+            return
+        }
+
+        handlePageChange(Math.max(1, currentPage - 1))
+    }
+
+    const handleNextPage = () => {
+        if (isLastPage) {
+            return
+        }
+
+        handlePageChange(currentPage + 1)
     }
 
     return (
@@ -70,9 +104,6 @@ export function HandoverRecordList() {
                     <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                         Danh sách bàn giao
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Chọn đơn vị vận chuyển ở panel bên trái, sau đó quét mã kiện để bàn giao.
-                    </p>
                 </div>
 
                 <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
@@ -81,8 +112,7 @@ export function HandoverRecordList() {
             </div>
 
             <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                💡 Quét mã mới sẽ thêm record lên đầu danh sách. Quét mã đã có sẽ được dedup rồi đưa
-                record mới lên đầu.
+                💡 Quét mã mới sẽ thêm record lên đầu danh sách. Quét mã đã có sẽ được dedup rồi đưa record mới lên đầu.
             </div>
 
             <ErrorMessage message={error} />
@@ -121,7 +151,7 @@ export function HandoverRecordList() {
 
                         <tbody className="divide-y divide-slate-200">
                             {records.map((record, index) => {
-                                const isFirstRowOnFirstPage = filters.PageIndex === 0 && index === 0
+                                const isFirstRowOnFirstPage = currentPage === 1 && index === 0
 
                                 return (
                                     <tr
@@ -132,7 +162,7 @@ export function HandoverRecordList() {
                                         )}
                                     >
                                         <td className="px-3 py-2 text-slate-500">
-                                            {filters.PageIndex * filters.PageSize + index + 1}
+                                            {(currentPage - 1) * pageSize + index + 1}
                                         </td>
 
                                         <td className="px-3 py-2">
@@ -179,8 +209,8 @@ export function HandoverRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={filters.PageIndex <= 0 || isBusy}
-                        onClick={() => handlePageChange(filters.PageIndex - 1)}
+                        disabled={isFirstPage || isBusy}
+                        onClick={handlePreviousPage}
                     >
                         Trước
                     </Button>
@@ -188,8 +218,8 @@ export function HandoverRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={currentPage >= totalPages || isBusy}
-                        onClick={() => handlePageChange(filters.PageIndex + 1)}
+                        disabled={isLastPage || isBusy}
+                        onClick={handleNextPage}
                     >
                         Sau
                     </Button>

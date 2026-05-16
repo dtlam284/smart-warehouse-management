@@ -27,6 +27,8 @@ interface IBackendEnvelope<TData> {
 interface IBackendPaginationResponse<TItem> {
     Items?: TItem[]
     Data?: TItem[]
+    Result?: TItem[]
+    Total?: number
     TotalRows?: number
     TotalCount?: number
     PageIndex?: number
@@ -41,8 +43,10 @@ interface IBackendPackingProduct {
     Name?: string | null
     ProductName?: string | null
     Code?: string
+    ProductCode?: string
     SKU?: string
     Sku?: string
+    Count?: number
     TotalQuantity?: number
 }
 
@@ -57,6 +61,18 @@ interface IBackendPackingDetail {
     ListItems?: IBackendPackingProduct[]
     Products?: IBackendPackingProduct[]
 }
+
+interface IBackendPackingRecord {
+    Id?: string
+    OrderCode?: string
+    DeliveryCode?: string | null
+    PackageCode?: string | null
+    Code?: string | null
+    PackerByName?: string | null
+    PackingDate?: string | null
+    ShippingUnitName?: string | null
+    TotalRows?: number
+}
 //#endregion backend dtos
 
 //#region helpers
@@ -68,7 +84,7 @@ function isBackendEnvelope(value: unknown): value is IBackendEnvelope<unknown> {
     return isRecord(value) && 'Code' in value && 'Message' in value
 }
 
-function assertSuccessfulEnvelope(response: unknown): unknown {
+function unwrapApiData(response: unknown): unknown {
     if (!isBackendEnvelope(response)) {
         return response
     }
@@ -78,6 +94,14 @@ function assertSuccessfulEnvelope(response: unknown): unknown {
     }
 
     return response.Data
+}
+
+function getStringValue(value: unknown, fallback = ''): string {
+    return typeof value === 'string' && value.trim().length > 0 ? value : fallback
+}
+
+function getNumberValue(value: unknown, fallback = 0): number {
+    return typeof value === 'number' ? value : fallback
 }
 
 function getScanCodeFromRequest(request: IGetPackageDetailsRequest): string {
@@ -99,11 +123,12 @@ function normalizePackingProduct(item: IBackendPackingProduct): IPackingProduct 
             'Không có tên sản phẩm',
         ListingPropertyCode:
             item.ListingPropertyCode ??
+            item.ProductCode ??
             item.Code ??
             item.SKU ??
             item.Sku ??
             '',
-        Quantity: item.Quantity ?? item.TotalQuantity ?? 0,
+        Quantity: item.Quantity ?? item.Count ?? item.TotalQuantity ?? 0,
     }
 }
 
@@ -111,9 +136,9 @@ function normalizePackageDetail(
     response: unknown,
     request: IGetPackageDetailsRequest,
 ): IPackingDetail {
-    const data = assertSuccessfulEnvelope(response)
+    const data = unwrapApiData(response)
 
-    if (!data || typeof data !== 'object') {
+    if (!isRecord(data)) {
         throw new Error(`Không tìm thấy kiện với mã ${getScanCodeFromRequest(request)}`)
     }
 
@@ -144,6 +169,48 @@ function normalizePackageDetail(
     }
 }
 
+function normalizePackingRecord(item: unknown): IPackingRecord | null {
+    if (!isRecord(item)) {
+        return null
+    }
+
+    const backendRecord = item as IBackendPackingRecord
+
+    const orderCode = getStringValue(backendRecord.OrderCode)
+    const packageCode = getStringValue(backendRecord.PackageCode ?? backendRecord.Code)
+    const deliveryCode = getStringValue(
+        backendRecord.DeliveryCode,
+        packageCode || orderCode,
+    )
+
+    if (!orderCode && !deliveryCode) {
+        return null
+    }
+
+    return {
+        Id: getStringValue(backendRecord.Id, orderCode || deliveryCode),
+        OrderCode: orderCode,
+        DeliveryCode: deliveryCode,
+        PackageCode: packageCode || undefined,
+        PackerByName: getStringValue(backendRecord.PackerByName, '-'),
+        PackingDate: getStringValue(backendRecord.PackingDate, new Date().toISOString()),
+        ShippingUnitName: getStringValue(backendRecord.ShippingUnitName, '-'),
+        TotalRows: getNumberValue(backendRecord.TotalRows),
+    }
+}
+
+function normalizePackingRecords(response: unknown): IPackingRecord[] {
+    const data = unwrapApiData(response)
+
+    if (!Array.isArray(data)) {
+        return []
+    }
+
+    return data
+        .map(normalizePackingRecord)
+        .filter((record): record is IPackingRecord => record !== null)
+}
+
 function normalizePackingListResponse(
     response:
         | IPaginatedResponse<IPackingRecord>
@@ -152,11 +219,13 @@ function normalizePackingListResponse(
         | unknown,
     fallbackRequest: IGetPackingListRequest,
 ): IPackingListResult {
-    const data = assertSuccessfulEnvelope(response)
+    const data = unwrapApiData(response)
 
     if (Array.isArray(data)) {
         return {
-            Data: data,
+            Data: data
+                .map(normalizePackingRecord)
+                .filter((record): record is IPackingRecord => record !== null),
             TotalRows: data.length,
             PageIndex: fallbackRequest.PageIndex,
             PageSize: fallbackRequest.PageSize,
@@ -172,13 +241,39 @@ function normalizePackingListResponse(
         }
     }
 
-    if ('Data' in data && Array.isArray(data.Data)) {
+    if ('Result' in data && Array.isArray(data.Result)) {
+        const records = data.Result
+            .map(normalizePackingRecord)
+            .filter((record): record is IPackingRecord => record !== null)
+
         return {
-            Data: data.Data as IPackingRecord[],
+            Data: records,
+            TotalRows:
+                typeof data.Total === 'number'
+                    ? data.Total
+                    : records.length,
+            PageIndex:
+                typeof data.PageIndex === 'number'
+                    ? data.PageIndex
+                    : fallbackRequest.PageIndex,
+            PageSize:
+                typeof data.PageSize === 'number'
+                    ? data.PageSize
+                    : fallbackRequest.PageSize,
+        }
+    }
+
+    if ('Data' in data && Array.isArray(data.Data)) {
+        const records = data.Data
+            .map(normalizePackingRecord)
+            .filter((record): record is IPackingRecord => record !== null)
+
+        return {
+            Data: records,
             TotalRows:
                 typeof data.TotalRows === 'number'
                     ? data.TotalRows
-                    : data.Data.length,
+                    : records.length,
             PageIndex:
                 typeof data.PageIndex === 'number'
                     ? data.PageIndex
@@ -191,14 +286,18 @@ function normalizePackingListResponse(
     }
 
     if ('Items' in data && Array.isArray(data.Items)) {
+        const records = data.Items
+            .map(normalizePackingRecord)
+            .filter((record): record is IPackingRecord => record !== null)
+
         return {
-            Data: data.Items as IPackingRecord[],
+            Data: records,
             TotalRows:
                 typeof data.TotalRows === 'number'
                     ? data.TotalRows
                     : typeof data.TotalCount === 'number'
                       ? data.TotalCount
-                      : data.Items.length,
+                      : records.length,
             PageIndex:
                 typeof data.PageIndex === 'number'
                     ? data.PageIndex
@@ -218,20 +317,8 @@ function normalizePackingListResponse(
     }
 }
 
-function normalizePackingRecords(response: unknown): IPackingRecord[] {
-    const data = assertSuccessfulEnvelope(response)
-
-    if (!Array.isArray(data)) {
-        return []
-    }
-
-    return data.filter((item): item is IPackingRecord => {
-        return isRecord(item) && typeof item.DeliveryCode === 'string'
-    })
-}
-
 function normalizeRemovePackingResponse(response: unknown): string[] {
-    const data = assertSuccessfulEnvelope(response)
+    const data = unwrapApiData(response)
 
     if (!Array.isArray(data)) {
         return []
@@ -241,7 +328,7 @@ function normalizeRemovePackingResponse(response: unknown): string[] {
 }
 
 function normalizePackingStats(response: unknown): IPackingStats {
-    const data = assertSuccessfulEnvelope(response)
+    const data = unwrapApiData(response)
 
     if (!isRecord(data)) {
         return {

@@ -19,17 +19,21 @@ function hasShippingUnitId(request: Pick<IUpdateHandoverRequest, 'ShippingUnitId
     return request.ShippingUnitId.trim().length > 0
 }
 
-function getDeliveryCodesFromRecords(records: IHandoverRecord[]): string[] {
-    return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
+function getRecordKey(record: IHandoverRecord): string {
+    return record.Id || record.DeliveryCode || record.PackageCode || record.OrderCode
+}
+
+function getRecordKeys(records: IHandoverRecord[]): string[] {
+    return records.map(getRecordKey).filter((key) => key.trim().length > 0)
 }
 
 function prependHandoverRecords(
     currentRecords: IHandoverRecord[],
     newRecords: IHandoverRecord[],
 ): IHandoverRecord[] {
-    const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
+    const newRecordKeys = new Set(getRecordKeys(newRecords))
     const filteredCurrentRecords = currentRecords.filter(
-        (record) => !newDeliveryCodes.has(record.DeliveryCode),
+        (record) => !newRecordKeys.has(getRecordKey(record)),
     )
 
     return [...newRecords, ...filteredCurrentRecords]
@@ -38,8 +42,8 @@ function prependHandoverRecords(
 
 //#region states
 const defaultFilters: IHandoverFilters = {
-    PageIndex: 0,
-    PageSize: 20,
+    PageIndex: 1,
+    PageSize: 10,
 }
 
 export interface IHandoverState {
@@ -168,12 +172,13 @@ const handoverSlice = createSlice({
             .addCase(addHandoverRecord.fulfilled, (state, action) => {
                 state.isUpdating = false
 
-                if (action.payload.length === 0) {
-                    return
-                }
+                const beforeCount = state.records.length
 
                 state.records = prependHandoverRecords(state.records, action.payload)
-                state.totalRows += action.payload.length
+
+                const addedCount = state.records.length - beforeCount
+
+                state.totalRows = Math.max(state.totalRows + addedCount, state.records.length)
             })
             .addCase(addHandoverRecord.rejected, (state, action) => {
                 state.isUpdating = false
@@ -189,7 +194,9 @@ const handoverSlice = createSlice({
                 const removedCodes = new Set(action.payload)
                 const beforeCount = state.records.length
 
-                state.records = state.records.filter((record) => !removedCodes.has(record.DeliveryCode))
+                state.records = state.records.filter((record) => {
+                    return !removedCodes.has(record.DeliveryCode)
+                })
 
                 const removedCount = beforeCount - state.records.length
 
@@ -205,12 +212,21 @@ const handoverSlice = createSlice({
             })
             .addCase(fetchHandoverList.fulfilled, (state, action) => {
                 state.isFetchingList = false
-                state.records = action.payload.Data
-                state.totalRows = action.payload.TotalRows
-                state.filters = {
-                    ...state.filters,
-                    PageIndex: action.payload.PageIndex,
-                    PageSize: action.payload.PageSize,
+
+                if (action.payload.Data.length > 0 || state.records.length === 0) {
+                    state.records = action.payload.Data
+                    state.totalRows = action.payload.TotalRows
+                }
+
+                if (
+                    state.filters.PageIndex !== action.payload.PageIndex ||
+                    state.filters.PageSize !== action.payload.PageSize
+                ) {
+                    state.filters = {
+                        ...state.filters,
+                        PageIndex: action.payload.PageIndex,
+                        PageSize: action.payload.PageSize,
+                    }
                 }
             })
             .addCase(fetchHandoverList.rejected, (state, action) => {

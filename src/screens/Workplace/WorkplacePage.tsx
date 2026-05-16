@@ -39,6 +39,10 @@ import {
     setWorkMode,
     toggleRemoveMode,
 } from '@/store/slices/appSlice'
+import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
+import { selectPackingFilters } from '@/store/selectors/packingSelectors'
+import { fetchPackingList, loadPackingStats } from '@/store/slices/packingSlice'
+import { fetchHandoverList, loadHandoverStats } from '@/store/slices/handoverSlice'
 import { loadShippingProviders } from '@/store/slices/warehouseSlice'
 import { NotificationViewport } from '@/components/shared/NotificationViewport'
 import type { ScanInputType, WorkMode } from '@/models/common/CommonInterface'
@@ -128,15 +132,11 @@ function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
 export function WorkplacePage() {
     const dispatch = useAppDispatch()
 
-    React.useEffect(() => {
-        void dispatch(loadShippingProviders(undefined))
-    }, [dispatch])
-
     const workMode = useAppSelector(selectWorkMode)
     const scanInputType = useAppSelector(selectScanInputType)
     const isRemoveMode = useAppSelector(selectIsRemoveMode)
-    const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
     const providers = useAppSelector(selectShippingProviders)
+    const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
     // console.log('Workplace providers from selector:', providers)
 
@@ -153,6 +153,44 @@ export function WorkplacePage() {
         dispatch(setScanInputType(type))
     }
 
+    //#region effects
+    React.useEffect(() => {
+        void dispatch(loadShippingProviders(undefined))
+    }, [dispatch])
+
+    React.useEffect(() => {
+        if (workMode !== 'PACKING') {
+            return
+        }
+
+        void dispatch(
+            fetchPackingList({
+                PageIndex: 1,
+                PageSize: 10,
+            }),
+        )
+
+        void dispatch(loadPackingStats({}))
+    }, [dispatch, workMode])
+
+    React.useEffect(() => {
+        if (workMode !== 'HANDOVER') {
+            return
+        }
+
+        void dispatch(loadHandoverStats({}))
+
+        void dispatch(
+            fetchHandoverList({
+                PageIndex: 1,
+                PageSize: 10,
+                ShippingUnitId: selectedShippingProviderId || undefined,
+            }),
+        )
+    }, [dispatch, selectedShippingProviderId, workMode])
+    //#endregion effects
+
+    //#region render
     return (
         <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900">
             <AppHeader />
@@ -245,5 +283,6 @@ export function WorkplacePage() {
             <NotificationViewport />
         </div>
     )
+    //#endregion render
 }
 //#endregion component

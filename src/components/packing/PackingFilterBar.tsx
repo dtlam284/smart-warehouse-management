@@ -20,7 +20,7 @@ export function PackingFilterBar() {
 
     const buildFilters = (): IPackingFilters => ({
         ...filters,
-        PageIndex: 0,
+        PageIndex: 1,
         Date: date.trim() || undefined,
         DeliveryCode: deliveryCode.trim() || undefined,
         ShippingUnitId: shippingUnitId || undefined,
@@ -35,8 +35,8 @@ export function PackingFilterBar() {
 
     const handleResetFilters = () => {
         const resetFilters: IPackingFilters = {
-            PageIndex: 0,
-            PageSize: filters.PageSize,
+            PageIndex: 1,
+            PageSize: filters.PageSize || 10,
         }
 
         setDate('')

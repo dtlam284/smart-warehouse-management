@@ -17,7 +17,10 @@ import type {
 } from '@/models/packing/PackingInterface'
 
 //#region helpers
-function isAllItemsHandled(activeDetail: IPackingDetail | null, scannedSKUs: Record<string, number>): boolean {
+function isAllItemsHandled(
+    activeDetail: IPackingDetail | null,
+    scannedSKUs: Record<string, number>,
+): boolean {
     if (!activeDetail || activeDetail.PackageDetails.length === 0) {
         return false
     }
@@ -29,13 +32,22 @@ function isAllItemsHandled(activeDetail: IPackingDetail | null, scannedSKUs: Rec
     })
 }
 
-function getDeliveryCodesFromRecords(records: IPackingRecord[]): string[] {
-    return records.map((record) => record.DeliveryCode).filter((code) => code.trim().length > 0)
+function getRecordKey(record: IPackingRecord): string {
+    return record.Id || record.DeliveryCode || record.PackageCode || record.OrderCode
 }
 
-function prependPackingRecords(currentRecords: IPackingRecord[], newRecords: IPackingRecord[]): IPackingRecord[] {
-    const newDeliveryCodes = new Set(getDeliveryCodesFromRecords(newRecords))
-    const filteredCurrentRecords = currentRecords.filter((record) => !newDeliveryCodes.has(record.DeliveryCode))
+function getRecordKeys(records: IPackingRecord[]): string[] {
+    return records.map(getRecordKey).filter((key) => key.trim().length > 0)
+}
+
+function prependPackingRecords(
+    currentRecords: IPackingRecord[],
+    newRecords: IPackingRecord[],
+): IPackingRecord[] {
+    const newRecordKeys = new Set(getRecordKeys(newRecords))
+    const filteredCurrentRecords = currentRecords.filter(
+        (record) => !newRecordKeys.has(getRecordKey(record)),
+    )
 
     return [...newRecords, ...filteredCurrentRecords]
 }
@@ -43,8 +55,8 @@ function prependPackingRecords(currentRecords: IPackingRecord[], newRecords: IPa
 
 //#region states
 const defaultFilters: IPackingFilters = {
-    PageIndex: 0,
-    PageSize: 20,
+    PageIndex: 1,
+    PageSize: 10,
 }
 
 export interface IPackingState {
@@ -87,7 +99,9 @@ export const loadPackageDetails = createAppAsyncThunk(
         try {
             return await packingService.getPackageDetails(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Không thể tải chi tiết kiện cần đóng gói'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Không thể tải chi tiết kiện cần đóng gói'),
+            )
         }
     },
 )
@@ -99,13 +113,17 @@ export const completePacking = createAppAsyncThunk(
         const { activeDetail, scannedSKUs } = state.packing
 
         if (!isAllItemsHandled(activeDetail, scannedSKUs)) {
-            return rejectWithValue('Not enough SKUs have been scanned to complete packaging. (Chưa quét đủ số lượng SKU để hoàn thành đóng gói.)')
+            return rejectWithValue(
+                'Not enough SKUs have been scanned to complete packaging. (Chưa quét đủ số lượng SKU để hoàn thành đóng gói.)',
+            )
         }
 
         try {
             return await packingService.completePacking(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to complete packing. (Không thể hoàn thành đóng gói.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to complete packing. (Không thể hoàn thành đóng gói.)'),
+            )
         }
     },
 )
@@ -116,7 +134,9 @@ export const cancelPacking = createAppAsyncThunk(
         try {
             return await packingService.cancelPacking(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to delete packing record. (Không thể xóa record đóng gói.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to delete packing record. (Không thể xóa record đóng gói.)'),
+            )
         }
     },
 )
@@ -127,7 +147,9 @@ export const fetchPackingList = createAppAsyncThunk(
         try {
             return await packingService.getPackingList(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to load packing list. (Không thể tải danh sách kiện đã đóng.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to load packing list. (Không thể tải danh sách kiện đã đóng.)'),
+            )
         }
     },
 )
@@ -138,7 +160,9 @@ export const loadPackingStats = createAppAsyncThunk(
         try {
             return await packingService.getPackingStats(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Unable to load packing statistics. (Không thể tải thống kê đóng gói.)'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Unable to load packing statistics. (Không thể tải thống kê đóng gói.)'),
+            )
         }
     },
 )
@@ -156,7 +180,9 @@ const packingSlice = createSlice({
                 return
             }
 
-            const product = state.activeDetail.PackageDetails.find((item) => item.ListingPropertyCode === sku)
+            const product = state.activeDetail.PackageDetails.find(
+                (item) => item.ListingPropertyCode === sku,
+            )
 
             if (!product) {
                 return
@@ -211,10 +237,7 @@ const packingSlice = createSlice({
             })
             .addCase(loadPackageDetails.rejected, (state, action) => {
                 state.isLoadingDetail = false
-                state.error = action.payload ?? 'Không thể tải thông tin kiện'
-                state.activeDetail = null
-                state.activeScanPayload = null
-                state.scannedSKUs = {}
+                state.error = action.payload ?? 'Không thể tải chi tiết kiện cần đóng gói'
             })
             .addCase(completePacking.pending, (state) => {
                 state.isUpdating = true
@@ -225,8 +248,17 @@ const packingSlice = createSlice({
                 state.activeDetail = null
                 state.activeScanPayload = null
                 state.scannedSKUs = {}
+
+                const beforeCount = state.processedList.length
+
                 state.processedList = prependPackingRecords(state.processedList, action.payload)
-                state.totalRows += action.payload.length
+
+                const addedCount = state.processedList.length - beforeCount
+
+                state.totalRows = Math.max(
+                    state.totalRows + addedCount,
+                    state.processedList.length,
+                )
             })
             .addCase(completePacking.rejected, (state, action) => {
                 state.isUpdating = false
@@ -242,7 +274,9 @@ const packingSlice = createSlice({
                 const removedCodes = new Set(action.payload)
                 const beforeCount = state.processedList.length
 
-                state.processedList = state.processedList.filter((record) => !removedCodes.has(record.DeliveryCode))
+                state.processedList = state.processedList.filter((record) => {
+                    return !removedCodes.has(record.DeliveryCode)
+                })
 
                 const removedCount = beforeCount - state.processedList.length
 
@@ -258,12 +292,21 @@ const packingSlice = createSlice({
             })
             .addCase(fetchPackingList.fulfilled, (state, action) => {
                 state.isFetchingList = false
-                state.processedList = action.payload.Data
-                state.totalRows = action.payload.TotalRows
-                state.filters = {
-                    ...state.filters,
-                    PageIndex: action.payload.PageIndex,
-                    PageSize: action.payload.PageSize,
+
+                if (action.payload.Data.length > 0 || state.processedList.length === 0) {
+                    state.processedList = action.payload.Data
+                    state.totalRows = action.payload.TotalRows
+                }
+
+                if (
+                    state.filters.PageIndex !== action.payload.PageIndex ||
+                    state.filters.PageSize !== action.payload.PageSize
+                ) {
+                    state.filters = {
+                        ...state.filters,
+                        PageIndex: action.payload.PageIndex,
+                        PageSize: action.payload.PageSize,
+                    }
                 }
             })
             .addCase(fetchPackingList.rejected, (state, action) => {
@@ -290,10 +333,10 @@ const packingSlice = createSlice({
 export const {
     clearActivePackingDetail,
     clearPackingError,
-    incrementSKU,
     resetPackingFilters,
     resetScannedSKUs,
     setPackingFilters,
+    incrementSKU,
 } = packingSlice.actions
 
 export default packingSlice.reducer

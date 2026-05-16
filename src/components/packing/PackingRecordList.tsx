@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { Button, ErrorMessage, Spinner } from '@/components/ui'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -7,9 +8,12 @@ import {
     selectPackingProcessedList,
     selectPackingTotalRows,
 } from '@/store/selectors/packingSelectors'
-import { fetchPackingList, setPackingFilters } from '@/store/slices/packingSlice'
+import {
+    clearPackingError,
+    fetchPackingList,
+    setPackingFilters,
+} from '@/store/slices/packingSlice'
 import type { IPackingFilters } from '@/models/packing/PackingInterface'
-
 
 //#region helpers
 function formatDateTime(value: string): string {
@@ -41,17 +45,50 @@ export function PackingRecordList() {
     const isFetching = useAppSelector(selectIsFetchingPackingList)
     const error = useAppSelector(selectPackingError)
 
-    const currentPage = filters.PageIndex + 1
-    const totalPages = getTotalPages(totalRows, filters.PageSize)
+    const currentPage = filters.PageIndex ?? 1
+    const pageSize = filters.PageSize ?? 10
+    const totalPages = getTotalPages(totalRows, pageSize)
+
+    const isFirstPage = currentPage <= 1
+    const isLastPage = currentPage >= totalPages
+
+    React.useEffect(() => {
+        if (!error) {
+            return
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            dispatch(clearPackingError())
+        }, 3500)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [dispatch, error])
 
     const handlePageChange = (nextPageIndex: number) => {
         const nextFilters: IPackingFilters = {
             ...filters,
             PageIndex: nextPageIndex,
+            PageSize: pageSize,
         }
 
         dispatch(setPackingFilters(nextFilters))
         void dispatch(fetchPackingList(nextFilters))
+    }
+
+    const handlePreviousPage = () => {
+        if (isFirstPage) {
+            return
+        }
+
+        handlePageChange(Math.max(1, currentPage - 1))
+    }
+
+    const handleNextPage = () => {
+        if (isLastPage) {
+            return
+        }
+
+        handlePageChange(currentPage + 1)
     }
 
     return (
@@ -99,7 +136,7 @@ export function PackingRecordList() {
                             {records.map((record, index) => (
                                 <tr key={record.Id || record.DeliveryCode} className="bg-white">
                                     <td className="px-3 py-2 text-slate-500">
-                                        {filters.PageIndex * filters.PageSize + index + 1}
+                                        {(currentPage - 1) * pageSize + index + 1}
                                     </td>
 
                                     <td className="px-3 py-2">
@@ -108,7 +145,9 @@ export function PackingRecordList() {
                                         </span>
                                     </td>
 
-                                    <td className="px-3 py-2 text-slate-600">{record.OrderCode}</td>
+                                    <td className="px-3 py-2 text-slate-600">
+                                        {record.OrderCode}
+                                    </td>
 
                                     <td className="px-3 py-2 text-slate-600">
                                         {record.PackerByName}
@@ -139,8 +178,8 @@ export function PackingRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={filters.PageIndex <= 0 || isFetching}
-                        onClick={() => handlePageChange(filters.PageIndex - 1)}
+                        disabled={isFirstPage || isFetching}
+                        onClick={handlePreviousPage}
                     >
                         Trước
                     </Button>
@@ -148,8 +187,8 @@ export function PackingRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={currentPage >= totalPages || isFetching}
-                        onClick={() => handlePageChange(filters.PageIndex + 1)}
+                        disabled={isLastPage || isFetching}
+                        onClick={handleNextPage}
                     >
                         Sau
                     </Button>
