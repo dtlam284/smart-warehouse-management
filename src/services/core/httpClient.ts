@@ -11,6 +11,13 @@ import type {
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
+export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized'
+
+export interface IAuthUnauthorizedEventDetail {
+    status: number
+    url: string
+}
+
 export interface IRequestOptions {
     body?: unknown
     headers?: HeadersInit
@@ -19,6 +26,12 @@ export interface IRequestOptions {
     signal?: AbortSignal
     timeoutMs?: number
     retryOnUnauthorized?: boolean
+
+    /**
+     * Dispatch the global unauthorized event when this request receives
+     * a final 401 after refresh has failed or is skipped.
+     */
+    redirectOnUnauthorized?: boolean
 
     /**
      * Use a specific access token for one request.
@@ -247,6 +260,18 @@ const normalizeBackendPayload = (
     return payload
 }
 
+const dispatchUnauthorizedEvent = (detail: IAuthUnauthorizedEventDetail): void => {
+    if (typeof window === 'undefined') {
+        return
+    }
+
+    window.dispatchEvent(
+        new CustomEvent<IAuthUnauthorizedEventDetail>(AUTH_UNAUTHORIZED_EVENT, {
+            detail,
+        }),
+    )
+}
+
 const isRefreshResponse = (payload: unknown): payload is ILoginResponse => {
     if (!payload || typeof payload !== 'object') {
         return false
@@ -328,6 +353,7 @@ export class HttpClient {
     ): Promise<TResponse> {
         const requiresAuth = options.requiresAuth ?? true
         const retryOnUnauthorized = options.retryOnUnauthorized ?? true
+        const redirectOnUnauthorized = options.redirectOnUnauthorized ?? true
 
         const url = resolveUrl(this.baseUrl, path, options.query)
         const timeoutMs = options.timeoutMs ?? this.timeoutMs
@@ -371,6 +397,16 @@ export class HttpClient {
                 signal,
             })
 
+            const shouldNotifyUnauthorized =
+                response.status === 401 &&
+                requiresAuth &&
+                !shouldSkipAuth &&
+                redirectOnUnauthorized &&
+                path !== this.refreshPath &&
+                !explicitAuthToken
+
+            let didNotifyUnauthorized = false
+
             if (
                 response.status === 401 &&
                 requiresAuth &&
@@ -387,11 +423,26 @@ export class HttpClient {
                         retryOnUnauthorized: false,
                     })
                 }
+
+                if (shouldNotifyUnauthorized) {
+                    dispatchUnauthorizedEvent({
+                        status: response.status,
+                        url: url.toString(),
+                    })
+                    didNotifyUnauthorized = true
+                }
             }
 
             const payload = await parseResponseBody(response)
 
             if (!response.ok) {
+                if (shouldNotifyUnauthorized && !didNotifyUnauthorized) {
+                    dispatchUnauthorizedEvent({
+                        status: response.status,
+                        url: url.toString(),
+                    })
+                }
+
                 const defaultMessage = `HTTP ${response.status} ${response.statusText}`
 
                 throw new ApiError(
