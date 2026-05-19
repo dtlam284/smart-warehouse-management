@@ -1,10 +1,7 @@
-import React, { useMemo, useState } from 'react'
-import { cn } from '../../utils'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
-import { useI18n } from '../../contexts/I18nContext'
-import { Button } from '../ui/button'
-import { useIsMobile } from '../../hooks/useMobile'
+import * as React from 'react'
 import { motion } from 'motion/react'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
@@ -12,18 +9,23 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '../ui/dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
+} from '@/components/ui/dialog'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { cn } from '@/components/ui/utils'
+import { useI18n } from '@/contexts/I18nContext'
 
+//#region types
 export interface Column<T> {
     key: string
     header: string
-    tooltip?: string
     render: (item: T) => React.ReactNode
     width?: string
+    tooltip?: string
 }
-
-export type DataTableFilterType = 'text' | 'select' | 'number' | 'date'
 
 export interface DataTableFilterOption {
     label: string
@@ -33,8 +35,8 @@ export interface DataTableFilterOption {
 export interface DataTableFilterField {
     key: string
     label: string
-    type?: DataTableFilterType
     value?: string | number | boolean | null
+    type?: 'text' | 'number' | 'date' | 'select'
     placeholder?: string
     options?: DataTableFilterOption[]
 }
@@ -43,87 +45,207 @@ export interface DataTableProps<T> {
     data: T[]
     columns: Column<T>[]
     keyExtractor: (item: T) => string
-    onRowClick?: (item: T) => void
+    isLoading?: boolean
     actions?: React.ReactNode
+    onRowClick?: (item: T) => void
+    mobileRenderCard?: (item: T) => React.ReactNode
+    prioritizeMeaningfulColumns?: boolean
+
+    searchValue?: string
+    defaultSearchValue?: string
+    searchPlaceholder?: string
+    onSearchChange?: (value: string) => void
+
     filters?: DataTableFilterField[]
     onFilterChange?: (key: string, value: string | null) => void
     onClearFilters?: () => void
     filterDialogTitle?: string
     filterDialogDescription?: string
-    searchPlaceholder?: string
-    mobileRenderCard?: (item: T) => React.ReactNode
-    searchValue?: string
-    onSearchChange?: (value: string) => void
+
     page?: number
     limit?: number
     total?: number
+    pageSizeOptions?: number[]
+    isServerPagination?: boolean
     onPageChange?: (page: number) => void
     onPageSizeChange?: (pageSize: number) => void
-    pageSizeOptions?: number[]
-    prioritizeMeaningfulColumns?: boolean
-    isLoading?: boolean
+}
+//#endregion types
+
+//#region helpers
+const hasFilterValue = (value: DataTableFilterField['value']): boolean => {
+    if (value === null || value === undefined) {
+        return false
+    }
+
+    if (typeof value === 'string') {
+        return value.trim().length > 0
+    }
+
+    if (typeof value === 'number') {
+        return Number.isFinite(value)
+    }
+
+    if (typeof value === 'boolean') {
+        return value
+    }
+
+    return false
 }
 
+const toFilterInputValue = (value: DataTableFilterField['value']): string => {
+    if (value === null || value === undefined) {
+        return ''
+    }
+
+    return String(value)
+}
+
+const normalizeFilterChangeValue = (value: string): string | null => {
+    const normalized = value.trim()
+
+    return normalized ? value : null
+}
+
+const formatFilterValue = (
+    filter: DataTableFilterField,
+    t: (
+        key: string,
+        params?: Record<string, string | number | boolean | null | undefined>,
+    ) => string,
+): string => {
+    const value = toFilterInputValue(filter.value)
+
+    if (!value) {
+        return t('Any')
+    }
+
+    if (filter.type === 'select') {
+        const option = filter.options?.find((item) => item.value === value)
+
+        return option ? t(option.label) : value
+    }
+
+    return value
+}
+
+const getColumnPriority = <T,>(column: Column<T>): number => {
+    const key = `${column.key} ${column.header}`.toLowerCase()
+
+    if (/(action|actions|operation|ops|tools)/.test(key)) {
+        return 90
+    }
+
+    if (/(\bid\b|_id|^id$)/.test(key) && !/(name|title|email|label|slug)/.test(key)) {
+        return 70
+    }
+
+    if (/(name|title|email|username|label|slug|code)/.test(key)) {
+        return 0
+    }
+
+    if (/(status|state)/.test(key)) {
+        return 20
+    }
+
+    if (/(created|updated|date|time)/.test(key)) {
+        return 30
+    }
+
+    return 40
+}
+
+const clampPage = (page: number, totalPages: number): number => {
+    return Math.min(Math.max(1, page), totalPages)
+}
+//#endregion helpers
+
+//#region component
 export function DataTable<T>({
     data,
     columns,
     keyExtractor,
-    onRowClick,
+    isLoading = false,
     actions,
-    filters,
+    onRowClick,
+    mobileRenderCard,
+    prioritizeMeaningfulColumns = true,
+
+    searchValue,
+    defaultSearchValue = '',
+    searchPlaceholder,
+    onSearchChange,
+
+    filters = [],
     onFilterChange,
     onClearFilters,
     filterDialogTitle,
     filterDialogDescription,
-    searchPlaceholder,
-    mobileRenderCard,
-    searchValue,
-    onSearchChange,
+
     page = 1,
     limit = 50,
     total,
+    pageSizeOptions = [10, 20, 50, 100],
+    isServerPagination = false,
     onPageChange,
     onPageSizeChange,
-    pageSizeOptions = [20, 50, 100],
-    prioritizeMeaningfulColumns = true,
-    isLoading = false,
 }: DataTableProps<T>) {
     const { t } = useI18n()
-    const isMobile = useIsMobile()
-    const [internalSearch, setInternalSearch] = useState('')
-    const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
-    const [localPage, setLocalPage] = useState(1)
-    const [localLimit, setLocalLimit] = useState(Math.max(1, limit || 50))
+
+    const [internalSearch, setInternalSearch] = React.useState(defaultSearchValue)
+    const [localPage, setLocalPage] = React.useState(1)
+    const [localLimit, setLocalLimit] = React.useState(Math.max(1, limit || 50))
+    const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false)
+
     const search = searchValue ?? internalSearch
-    const hasSearch = Boolean(onSearchChange || searchValue !== undefined)
-    const isServerPagination = Boolean(onPageChange)
-    const availableFilters = React.useMemo(() => filters ?? [], [filters])
-    const activeFilters = useMemo(
-        () => availableFilters.filter((filter) => hasFilterValue(filter.value)),
-        [availableFilters],
-    )
-    const totalItems = isServerPagination ? (total ?? data.length) : data.length
-    const safeLimit = Math.max(1, limit || 50)
-    const selectedLimit = isServerPagination ? safeLimit : Math.max(1, localLimit)
-    const selectedPage = isServerPagination ? Math.max(1, page || 1) : Math.max(1, localPage)
+    const selectedLimit = isServerPagination ? Math.max(1, limit || 50) : localLimit
+
+    const activeFilters = React.useMemo(() => {
+        return filters.filter((filter) => hasFilterValue(filter.value))
+    }, [filters])
+
+    const availableFilters = React.useMemo(() => {
+        return filters
+    }, [filters])
+
+    const hasSearch = Boolean(onSearchChange || searchValue !== undefined || defaultSearchValue)
+    const hasToolbar = hasSearch || availableFilters.length > 0 || Boolean(actions)
+
+    const filteredData = React.useMemo(() => {
+        if (isServerPagination || onSearchChange || !search.trim()) {
+            return data
+        }
+
+        const normalizedSearch = search.trim().toLowerCase()
+
+        return data.filter((item) => {
+            return JSON.stringify(item).toLowerCase().includes(normalizedSearch)
+        })
+    }, [data, isServerPagination, onSearchChange, search])
+
+    const totalItems = isServerPagination ? (total ?? data.length) : filteredData.length
     const totalPages = Math.max(1, Math.ceil(totalItems / selectedLimit))
-    const boundedPage = Math.min(selectedPage, totalPages)
+    const boundedPage = clampPage(isServerPagination ? page : localPage, totalPages)
+
     const start = totalItems === 0 ? 0 : (boundedPage - 1) * selectedLimit + 1
-    const end = totalItems === 0 ? 0 : Math.min(boundedPage * selectedLimit, totalItems)
+    const end = Math.min(boundedPage * selectedLimit, totalItems)
+
     const hasPreviousPage = boundedPage > 1
     const hasNextPage = boundedPage < totalPages
-    const hasToolbar = hasSearch || availableFilters.length > 0 || Boolean(actions)
-    const filterDialogTitleText = t(filterDialogTitle || 'More filters')
-    const filterDialogDescriptionText = t(
-        filterDialogDescription ||
-            'Refine the table data by selecting one or more filter conditions.',
-    )
+
     const searchPlaceholderText = t(searchPlaceholder || 'Search...')
+    const filterDialogTitleText = t(filterDialogTitle || 'More Filters')
+    const filterDialogDescriptionText = t(
+        filterDialogDescription || 'Refine the table results using the filters below.',
+    )
+
     const tableRows = isServerPagination
         ? data
-        : data.slice((boundedPage - 1) * selectedLimit, boundedPage * selectedLimit)
-    const visiblePages = useMemo(() => {
+        : filteredData.slice((boundedPage - 1) * selectedLimit, boundedPage * selectedLimit)
+
+    const visiblePages = React.useMemo(() => {
         const maxVisible = 7
+
         if (totalPages <= maxVisible) {
             return Array.from({ length: totalPages }, (_, index) => index + 1)
         }
@@ -131,11 +253,13 @@ export function DataTable<T>({
         const half = Math.floor(maxVisible / 2)
         let startPage = Math.max(1, boundedPage - half)
         const endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
         startPage = Math.max(1, endPage - maxVisible + 1)
 
         return Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index)
     }, [boundedPage, totalPages])
-    const orderedColumns = useMemo(() => {
+
+    const orderedColumns = React.useMemo(() => {
         if (!prioritizeMeaningfulColumns) {
             return columns
         }
@@ -152,6 +276,7 @@ export function DataTable<T>({
 
     const clearAllFilters = () => {
         onClearFilters?.()
+
         if (!onFilterChange) {
             return
         }
@@ -163,41 +288,32 @@ export function DataTable<T>({
         })
     }
 
-    React.useEffect(() => {
-        if (isServerPagination) {
-            setLocalLimit(Math.max(1, limit || 50))
-            return
-        }
-
-        if (localPage > totalPages) {
-            setLocalPage(totalPages)
-        }
-    }, [isServerPagination, limit, localPage, totalPages])
-
     const goToPage = (nextPage: number) => {
+        const safeNextPage = clampPage(nextPage, totalPages)
+
         if (isServerPagination) {
-            onPageChange?.(nextPage)
+            onPageChange?.(safeNextPage)
             return
         }
 
-        setLocalPage(nextPage)
+        setLocalPage(safeNextPage)
     }
 
     return (
-        <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-            {/* Table Toolbar */}
+        <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
             {hasToolbar ? (
-                <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2 justify-between bg-slate-50/70 dark:bg-slate-900/60">
-                    <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[220px]">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/60">
+                    <div className="flex min-w-[220px] flex-1 flex-wrap items-center gap-2">
                         {hasSearch ? (
                             <div className="relative w-full sm:w-auto sm:min-w-[260px]">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                                 <input
                                     type="text"
                                     value={search}
                                     aria-label={searchPlaceholderText}
-                                    onChange={(e) => {
-                                        const nextValue = e.target.value
+                                    onChange={(event) => {
+                                        const nextValue = event.target.value
+
                                         if (onSearchChange) {
                                             onSearchChange(nextValue)
                                             return
@@ -226,7 +342,7 @@ export function DataTable<T>({
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto sm:justify-end">
+                    <div className="flex w-full items-center gap-2 sm:w-auto sm:justify-end">
                         {availableFilters.length > 0 ? (
                             <Button
                                 variant="outline"
@@ -234,7 +350,7 @@ export function DataTable<T>({
                                 className="gap-1.5"
                                 onClick={() => setIsFilterDialogOpen(true)}
                             >
-                                <SlidersHorizontal className="w-3.5 h-3.5" />
+                                <SlidersHorizontal className="h-3.5 w-3.5" />
                                 {t('More Filters')}
                             </Button>
                         ) : null}
@@ -244,57 +360,59 @@ export function DataTable<T>({
                 </div>
             ) : null}
 
-            {/* Content */}
-            <div className="cms-scrollbar relative flex-1 overflow-auto min-h-[400px]">
-                {isMobile && mobileRenderCard ? (
-                    <div className="p-3 space-y-3">
-                        {tableRows.map((item, i) => (
+            <div className="cms-scrollbar relative min-h-[400px] flex-1 overflow-auto">
+                {mobileRenderCard ? (
+                    <div className="space-y-3 p-3 md:hidden">
+                        {tableRows.map((item, index) => (
                             <motion.div
+                                key={keyExtractor(item)}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                key={keyExtractor(item)}
+                                transition={{ delay: index * 0.05 }}
                                 onClick={() => onRowClick?.(item)}
                             >
                                 {mobileRenderCard(item)}
                             </motion.div>
                         ))}
                     </div>
-                ) : (
-                    <table className="w-full text-left text-sm whitespace-nowrap text-slate-700 dark:text-slate-300">
-                        <thead className="bg-slate-50/80 dark:bg-slate-900/80 sticky top-0 z-10 backdrop-blur-sm">
+                ) : null}
+
+                <div className={mobileRenderCard ? 'hidden md:block' : undefined}>
+                    <table className="w-full whitespace-nowrap text-left text-sm text-slate-700 dark:text-slate-300">
+                        <thead className="sticky top-0 z-10 bg-slate-50/80 backdrop-blur-sm dark:bg-slate-900/80">
                             <tr>
-                                {orderedColumns.map((col) => (
+                                {orderedColumns.map((column) => (
                                     <th
-                                        key={col.key}
+                                        key={column.key}
                                         className={cn(
-                                            'px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800',
-                                            col.width,
+                                            'border-b border-slate-200 px-4 py-3 font-semibold text-slate-600 dark:border-slate-800 dark:text-slate-300',
+                                            column.width,
                                         )}
                                     >
-                                        {col.tooltip ? (
+                                        {column.tooltip ? (
                                             <Tooltip>
                                                 <TooltipTrigger className="cursor-help underline decoration-slate-300 decoration-dashed underline-offset-4 focus:outline-none">
-                                                    {t(col.header)}
+                                                    {t(column.header)}
                                                 </TooltipTrigger>
                                                 <TooltipContent>
-                                                    <p>{col.tooltip}</p>
+                                                    <p>{column.tooltip}</p>
                                                 </TooltipContent>
                                             </Tooltip>
                                         ) : (
-                                            t(col.header)
+                                            t(column.header)
                                         )}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
+
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                            {tableRows.map((item, i) => (
+                            {tableRows.map((item, index) => (
                                 <motion.tr
+                                    key={keyExtractor(item)}
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.2, delay: i * 0.03 }}
-                                    key={keyExtractor(item)}
+                                    transition={{ duration: 0.2, delay: index * 0.03 }}
                                     onClick={() => onRowClick?.(item)}
                                     className={cn(
                                         'group transition-colors',
@@ -303,17 +421,18 @@ export function DataTable<T>({
                                             : '',
                                     )}
                                 >
-                                    {orderedColumns.map((col) => (
+                                    {orderedColumns.map((column) => (
                                         <td
-                                            key={`${keyExtractor(item)}-${col.key}`}
+                                            key={`${keyExtractor(item)}-${column.key}`}
                                             className="px-4 py-3"
                                         >
-                                            {col.render(item)}
+                                            {column.render(item)}
                                         </td>
                                     ))}
                                 </motion.tr>
                             ))}
-                            {tableRows.length === 0 && (
+
+                            {tableRows.length === 0 ? (
                                 <tr>
                                     <td
                                         colSpan={orderedColumns.length}
@@ -322,17 +441,18 @@ export function DataTable<T>({
                                         {isLoading ? t('Loading...') : t('No results found.')}
                                     </td>
                                 </tr>
-                            )}
+                            ) : null}
                         </tbody>
                     </table>
-                )}
+                </div>
             </div>
 
-            {/* Simple Pagination Footer Mock */}
-            <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-slate-400 gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400 sm:text-sm">
                 <div>
-                    {t('Showing')} {start} {t('to')} {end} {t('of')} {totalItems} {t('results')}
+                    {t('Showing')} {start} {t('to')} {end} {t('of')} {totalItems}{' '}
+                    {t('results')}
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                     <label className="inline-flex items-center gap-1.5">
                         <span className="text-xs text-slate-500">{t('Rows')}</span>
@@ -345,6 +465,7 @@ export function DataTable<T>({
                                     1,
                                     Number(event.target.value) || selectedLimit,
                                 )
+
                                 if (isServerPagination) {
                                     onPageSizeChange?.(nextSize)
                                     onPageChange?.(1)
@@ -376,6 +497,7 @@ export function DataTable<T>({
                     >
                         {t('Previous')}
                     </Button>
+
                     {visiblePages.map((pageNumber) => (
                         <Button
                             key={pageNumber}
@@ -387,6 +509,7 @@ export function DataTable<T>({
                             {pageNumber}
                         </Button>
                     ))}
+
                     <Button
                         variant="outline"
                         size="sm"
@@ -404,6 +527,7 @@ export function DataTable<T>({
                         <DialogTitle>{filterDialogTitleText}</DialogTitle>
                         <DialogDescription>{filterDialogDescriptionText}</DialogDescription>
                     </DialogHeader>
+
                     <div className="grid max-h-[60vh] gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
                         {availableFilters.map((filter) => {
                             const filterType = filter.type ?? 'text'
@@ -414,6 +538,7 @@ export function DataTable<T>({
                                     <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
                                         {t(filter.label)}
                                     </span>
+
                                     {filterType === 'select' ? (
                                         <select
                                             value={value}
@@ -428,6 +553,7 @@ export function DataTable<T>({
                                             <option value="">
                                                 {t(filter.placeholder || 'All')}
                                             </option>
+
                                             {(filter.options ?? []).map((option) => (
                                                 <option
                                                     key={`${filter.key}-${option.value}`}
@@ -461,6 +587,7 @@ export function DataTable<T>({
                             )
                         })}
                     </div>
+
                     <DialogFooter>
                         <Button variant="outline" onClick={clearAllFilters}>
                             {t('Reset Filters')}
@@ -472,82 +599,4 @@ export function DataTable<T>({
         </div>
     )
 }
-
-const hasFilterValue = (value: DataTableFilterField['value']): boolean => {
-    if (value === null || value === undefined) {
-        return false
-    }
-
-    if (typeof value === 'string') {
-        return value.trim().length > 0
-    }
-
-    if (typeof value === 'number') {
-        return Number.isFinite(value)
-    }
-
-    if (typeof value === 'boolean') {
-        return value
-    }
-
-    return false
-}
-
-const toFilterInputValue = (value: DataTableFilterField['value']): string => {
-    if (value === null || value === undefined) {
-        return ''
-    }
-
-    return String(value)
-}
-
-const normalizeFilterChangeValue = (value: string): string | null => {
-    const normalized = value.trim()
-    return normalized ? value : null
-}
-
-const formatFilterValue = (
-    filter: DataTableFilterField,
-    t: (
-        key: string,
-        params?: Record<string, string | number | boolean | null | undefined>,
-    ) => string,
-): string => {
-    const value = toFilterInputValue(filter.value)
-    if (!value) {
-        return t('Any')
-    }
-
-    if (filter.type === 'select') {
-        const option = filter.options?.find((item) => item.value === value)
-        return option ? t(option.label) : value
-    }
-
-    return value
-}
-
-const getColumnPriority = <T,>(column: Column<T>): number => {
-    const key = `${column.key} ${column.header}`.toLowerCase()
-
-    if (/(action|actions|operation|ops|tools)/.test(key)) {
-        return 90
-    }
-
-    if (/(\bid\b|_id|^id$)/.test(key) && !/(name|title|email|label|slug)/.test(key)) {
-        return 70
-    }
-
-    if (/(name|title|email|username|label|slug|code)/.test(key)) {
-        return 0
-    }
-
-    if (/(status|state)/.test(key)) {
-        return 20
-    }
-
-    if (/(created|updated|date|time)/.test(key)) {
-        return 30
-    }
-
-    return 40
-}
+//#endregion component
