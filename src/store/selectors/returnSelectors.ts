@@ -1,6 +1,6 @@
-import type { 
-    IReturnProviderStats, 
-    IReturnRecord 
+import type {
+    IReturnProviderStats,
+    IReturnRecord,
 } from '@/models/return/ReturnInterface'
 import type { RootState } from '@/store/store'
 
@@ -8,6 +8,9 @@ import type { RootState } from '@/store/store'
 export const selectReturnState = (state: RootState) => state.returnDelivery
 
 export const selectActiveReturn = (state: RootState) => state.returnDelivery.activeReturn
+
+export const selectActiveReturnScanPayload = (state: RootState) =>
+    state.returnDelivery.activeScanPayload
 
 export const selectReturnRecords = (state: RootState) => state.returnDelivery.records
 
@@ -19,13 +22,17 @@ export const selectReturnStats = (state: RootState) => state.returnDelivery.retu
 //#endregion base selectors
 
 //#region loading selectors
-export const selectIsLoadingReturnDetail = (state: RootState) => state.returnDelivery.isLoadingDetail
+export const selectIsLoadingReturnDetail = (state: RootState) =>
+    state.returnDelivery.isLoadingDetail
 
-export const selectIsFetchingReturnList = (state: RootState) => state.returnDelivery.isFetchingList
+export const selectIsFetchingReturnList = (state: RootState) =>
+    state.returnDelivery.isFetchingList
 
-export const selectIsLoadingReturnStats = (state: RootState) => state.returnDelivery.isLoadingStats
+export const selectIsLoadingReturnStats = (state: RootState) =>
+    state.returnDelivery.isLoadingStats
 
-export const selectIsConfirmingReturn = (state: RootState) => state.returnDelivery.isConfirming
+export const selectIsConfirmingReturn = (state: RootState) =>
+    state.returnDelivery.isConfirming
 
 export const selectIsRemovingReturn = (state: RootState) => state.returnDelivery.isRemoving
 //#endregion loading selectors
@@ -35,9 +42,11 @@ export const selectReturnError = (state: RootState) => state.returnDelivery.erro
 //#endregion error selectors
 
 //#region active return selectors
-export const selectActiveReturnItems = (state: RootState) => state.returnDelivery.activeReturn?.ListItem ?? []
+export const selectActiveReturnItems = (state: RootState) =>
+    state.returnDelivery.activeReturn?.ListItem ?? []
 
-export const selectActiveReturnType = (state: RootState) => state.returnDelivery.activeReturn?.ReturnType
+export const selectActiveReturnType = (state: RootState) =>
+    state.returnDelivery.activeReturn?.ReturnType
 
 export const selectHasActiveReturn = (state: RootState): boolean => {
     return state.returnDelivery.activeReturn !== null
@@ -66,7 +75,9 @@ export const selectReturnProviderStats = (state: RootState): IReturnProviderStat
 export const selectReturnProviderStatsByShippingUnitId =
     (shippingUnitId: string) =>
     (state: RootState): IReturnProviderStats | undefined => {
-        return state.returnDelivery.returnStats?.Statistics.find((stat) => stat.ShippingUnitId === shippingUnitId)
+        return state.returnDelivery.returnStats?.Statistics.find(
+            (stat) => stat.ShippingUnitId === shippingUnitId,
+        )
     }
 //#endregion provider stats selectors
 

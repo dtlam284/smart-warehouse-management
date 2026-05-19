@@ -2,14 +2,107 @@ import * as React from 'react'
 import { Button, Input } from '@/components/ui'
 import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
 import { useAppDispatch, useAppSelector } from '@/store'
+import { selectScanInputType, selectSelectedShippingProviderId } from '@/store/selectors/appSelectors'
 import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
 import { selectShippingProviders } from '@/store/selectors/warehouseSelectors'
-import {
-    fetchHandoverList,
-    resetHandoverFilters,
-    setHandoverFilters,
-} from '@/store/slices/handoverSlice'
+import { fetchHandoverList, resetHandoverFilters, setHandoverFilters } from '@/store/slices/handoverSlice'
+import type { ScanInputType } from '@/models/common/CommonInterface'
 import type { IHandoverFilters } from '@/models/handover/HandoverInterface'
+
+//#region helpers
+function shouldUseShippingProvider(scanInputType: ScanInputType): boolean {
+    return scanInputType !== 'DELIVERYCODE'
+}
+
+function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IHandoverFilters> {
+    const normalizedCode = code.trim()
+
+    const emptyCodeFilter = {
+        DeliveryCode: undefined,
+        OrderCode: undefined,
+        OrderCodeRef: undefined,
+        PackageCode: undefined,
+    }
+
+    if (!normalizedCode) {
+        return emptyCodeFilter
+    }
+
+    switch (scanInputType) {
+        case 'DELIVERYCODE':
+            return {
+                ...emptyCodeFilter,
+                DeliveryCode: normalizedCode,
+            }
+
+        case 'PACKAGECODE':
+            return {
+                ...emptyCodeFilter,
+                PackageCode: normalizedCode,
+            }
+
+        case 'ORDERCODEREF':
+            return {
+                ...emptyCodeFilter,
+                OrderCodeRef: normalizedCode,
+            }
+
+        case 'ORDERCODE':
+            return {
+                ...emptyCodeFilter,
+                OrderCode: normalizedCode,
+            }
+    }
+}
+
+function getCodeFilterLabel(scanInputType: ScanInputType): string {
+    switch (scanInputType) {
+        case 'DELIVERYCODE':
+            return 'Mã vận đơn'
+
+        case 'PACKAGECODE':
+            return 'Mã kiện'
+
+        case 'ORDERCODEREF':
+            return 'Mã tham chiếu'
+
+        case 'ORDERCODE':
+            return 'Mã đơn'
+    }
+}
+
+function getCodeFilterPlaceholder(scanInputType: ScanInputType): string {
+    switch (scanInputType) {
+        case 'DELIVERYCODE':
+            return 'Nhập mã vận đơn...'
+
+        case 'PACKAGECODE':
+            return 'Nhập mã kiện...'
+
+        case 'ORDERCODEREF':
+            return 'Nhập mã tham chiếu...'
+
+        case 'ORDERCODE':
+            return 'Nhập mã đơn...'
+    }
+}
+
+function getInitialCodeValue(filters: IHandoverFilters, scanInputType: ScanInputType): string {
+    switch (scanInputType) {
+        case 'DELIVERYCODE':
+            return filters.DeliveryCode ?? ''
+
+        case 'PACKAGECODE':
+            return filters.PackageCode ?? ''
+
+        case 'ORDERCODEREF':
+            return filters.OrderCodeRef ?? ''
+
+        case 'ORDERCODE':
+            return filters.OrderCode ?? ''
+    }
+}
+//#endregion helpers
 
 //#region component
 export function HandoverFilterBar() {
@@ -17,17 +110,24 @@ export function HandoverFilterBar() {
 
     const filters = useAppSelector(selectHandoverFilters)
     const providers = useAppSelector(selectShippingProviders)
+    const scanInputType = useAppSelector(selectScanInputType)
+    const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
     const [date, setDate] = React.useState(filters.Date ?? '')
-    const [deliveryCode, setDeliveryCode] = React.useState(filters.DeliveryCode ?? '')
-    const [shippingUnitId, setShippingUnitId] = React.useState(filters.ShippingUnitId ?? '')
+    const [code, setCode] = React.useState(() => getInitialCodeValue(filters, scanInputType))
 
-    const buildFilters = (): IHandoverFilters => ({
+    const shouldShowShippingProvider = shouldUseShippingProvider(scanInputType)
+    const effectiveShippingUnitId = shouldShowShippingProvider
+        ? selectedShippingProviderId || filters.ShippingUnitId || ''
+        : ''
+
+    const buildFilters = (shippingUnitId = effectiveShippingUnitId): IHandoverFilters => ({
         ...filters,
+        ...buildCodeFilter(scanInputType, code),
         PageIndex: 1,
+        PageSize: filters.PageSize,
         Date: date.trim() || undefined,
-        DeliveryCode: deliveryCode.trim() || undefined,
-        ShippingUnitId: shippingUnitId || undefined,
+        ShippingUnitId: shouldShowShippingProvider ? shippingUnitId || undefined : undefined,
     })
 
     const handleApplyFilters = () => {
@@ -37,17 +137,27 @@ export function HandoverFilterBar() {
         void dispatch(fetchHandoverList(nextFilters))
     }
 
+    const handleShippingUnitChange = (provider: { Id: string; Name: string }) => {
+        const nextFilters = buildFilters(provider.Id)
+
+        dispatch(setHandoverFilters(nextFilters))
+        void dispatch(fetchHandoverList(nextFilters))
+    }
+
     const handleResetFilters = () => {
         const resetFilters: IHandoverFilters = {
             PageIndex: 1,
             PageSize: filters.PageSize || 10,
+            ShippingUnitId: shouldShowShippingProvider
+                ? selectedShippingProviderId || undefined
+                : undefined,
         }
 
         setDate('')
-        setDeliveryCode('')
-        setShippingUnitId('')
+        setCode('')
 
         dispatch(resetHandoverFilters())
+        dispatch(setHandoverFilters(resetFilters))
         void dispatch(fetchHandoverList(resetFilters))
     }
 
@@ -59,7 +169,13 @@ export function HandoverFilterBar() {
                 </h2>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]">
+            <div
+                className={
+                    shouldShowShippingProvider
+                        ? 'grid gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]'
+                        : 'grid gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
+                }
+            >
                 <Input
                     type="date"
                     label="Ngày"
@@ -68,23 +184,25 @@ export function HandoverFilterBar() {
                 />
 
                 <Input
-                    label="Mã kiện"
-                    placeholder="Nhập mã kiện..."
-                    value={deliveryCode}
-                    onChange={(event) => setDeliveryCode(event.target.value)}
+                    label={getCodeFilterLabel(scanInputType)}
+                    placeholder={getCodeFilterPlaceholder(scanInputType)}
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
                 />
 
-                <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-semibold text-slate-700">
-                        Đơn vị vận chuyển
-                    </label>
+                {shouldShowShippingProvider ? (
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-semibold text-slate-700">
+                            Đơn vị vận chuyển
+                        </label>
 
-                    <ShippingProviderSelect
-                        providers={providers}
-                        value={shippingUnitId}
-                        onChange={(provider) => setShippingUnitId(provider.Id)}
-                    />
-                </div>
+                        <ShippingProviderSelect
+                            providers={providers}
+                            value={effectiveShippingUnitId}
+                            onChange={handleShippingUnitChange}
+                        />
+                    </div>
+                ) : null}
 
                 <div className="flex items-end">
                     <Button onClick={handleApplyFilters}>Lọc</Button>

@@ -1,1 +1,1 @@
-import { handoverService } from './handoverService'
+export { handoverService } from './handoverService'

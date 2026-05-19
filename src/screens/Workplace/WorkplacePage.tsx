@@ -20,9 +20,8 @@ import {
     ReturnStatsBar,
 } from '@/components/return'
 import { ScannerInput } from '@/components/scanner/ScannerInput'
-import { 
-    ShippingProviderSelect 
-} from '@/components/shared/ShippingProviderSelect'
+import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
+import { NotificationViewport } from '@/components/shared/NotificationViewport'
 import { Badge, EmptyState, ErrorMessage } from '@/components/ui'
 import { useScanProcessor } from '@/hooks/useScanProcessor'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -32,6 +31,7 @@ import {
     selectSelectedShippingProviderId,
     selectWorkMode,
 } from '@/store/selectors/appSelectors'
+import { selectReturnFilters } from '@/store/selectors/returnSelectors'
 import { selectShippingProviders } from '@/store/selectors/warehouseSelectors'
 import {
     setScanInputType,
@@ -39,12 +39,11 @@ import {
     setWorkMode,
     toggleRemoveMode,
 } from '@/store/slices/appSlice'
-import { fetchPackingList, loadPackingStats } from '@/store/slices/packingSlice'
 import { fetchHandoverList, loadHandoverStats } from '@/store/slices/handoverSlice'
-import { selectReturnFilters } from '@/store/selectors/returnSelectors'
-import { fetchReturnList, loadReturnStats } from '@/store/slices/returnSlice'
+import { fetchPackingList, loadPackingStats } from '@/store/slices/packingSlice'
+import { fetchReturnList, loadReturnStats, setReturnFilters } from '@/store/slices/returnSlice'
 import { loadShippingProviders } from '@/store/slices/warehouseSlice'
-import { NotificationViewport } from '@/components/shared/NotificationViewport'
+import type { IShippingProvider } from '@/models/warehouse/WarehouseInterface'
 import type { ScanInputType, WorkMode } from '@/models/common/CommonInterface'
 
 //#region helpers
@@ -62,13 +61,20 @@ function getScannerPlaceholder(
     }
 
     const placeholderByType: Record<ScanInputType, string> = {
-        DELIVERYCODE: 'Quét mã kiện (DL...)...',
-        PACKAGECODE: 'Quét package code...',
+        DELIVERYCODE: 'Quét mã vận đơn...',
+        PACKAGECODE: 'Quét mã kiện...',
         ORDERCODE: 'Quét mã đơn hàng...',
         ORDERCODEREF: 'Quét mã tham chiếu...',
     }
 
     return placeholderByType[scanInputType]
+}
+
+function shouldRequireShippingProvider(workMode: WorkMode, scanInputType: ScanInputType): boolean {
+    return (
+        (workMode === 'HANDOVER' || workMode === 'RETURN_DELIVERY') &&
+        scanInputType !== 'DELIVERYCODE'
+    )
 }
 //#endregion helpers
 
@@ -139,12 +145,14 @@ export function WorkplacePage() {
     const providers = useAppSelector(selectShippingProviders)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
-    // console.log('Workplace providers from selector:', providers)
-
     const { scanError, handleScan } = useScanProcessor()
 
-    const shouldShowShippingProvider = workMode === 'HANDOVER' || workMode === 'RETURN_DELIVERY'
+    const shouldShowShippingProvider = shouldRequireShippingProvider(workMode, scanInputType)
+    const workflowShippingUnitId = shouldShowShippingProvider
+        ? selectedShippingProviderId || undefined
+        : undefined
     const scannerPlaceholder = getScannerPlaceholder(workMode, scanInputType, isRemoveMode)
+    const returnPageSize = returnFilters.PageSize
 
     const handleModeChange = (mode: Exclude<WorkMode, 'NONE'>) => {
         dispatch(setWorkMode(mode))
@@ -152,6 +160,35 @@ export function WorkplacePage() {
 
     const handleScanTypeChange = (type: ScanInputType) => {
         dispatch(setScanInputType(type))
+    }
+
+    const handleShippingProviderChange = (provider: Pick<IShippingProvider, 'Id' | 'Name'>) => {
+        dispatch(setShippingProvider(provider))
+
+        if (workMode === 'HANDOVER') {
+            void dispatch(
+                fetchHandoverList({
+                    PageIndex: 1,
+                    PageSize: 10,
+                    ShippingUnitId: provider.Id || undefined,
+                }),
+            )
+
+            void dispatch(loadHandoverStats({}))
+            return
+        }
+
+        if (workMode === 'RETURN_DELIVERY') {
+            const nextFilters = {
+                PageIndex: 1,
+                PageSize: returnPageSize ?? 10,
+                ShippingUnitId: provider.Id || undefined,
+            }
+
+            dispatch(setReturnFilters(nextFilters))
+            void dispatch(fetchReturnList(nextFilters))
+            void dispatch(loadReturnStats({}))
+        }
     }
 
     //#region effects
@@ -185,28 +222,28 @@ export function WorkplacePage() {
             fetchHandoverList({
                 PageIndex: 1,
                 PageSize: 10,
-                ShippingUnitId: selectedShippingProviderId || undefined,
+                ShippingUnitId: workflowShippingUnitId,
             }),
         )
-    }, [dispatch, selectedShippingProviderId, workMode])
+    }, [dispatch, workflowShippingUnitId, workMode])
 
     React.useEffect(() => {
         if (workMode !== 'RETURN_DELIVERY') {
             return
         }
 
-        void dispatch(loadReturnStats({}))
+        const nextFilters = {
+            PageIndex: 1,
+            PageSize: returnPageSize ?? 10,
+            ShippingUnitId: workflowShippingUnitId,
+        }
 
-        void dispatch(
-            fetchReturnList({
-                PageIndex: 1,
-                PageSize: returnFilters.PageSize ?? 10,
-                ShippingUnitId: selectedShippingProviderId || undefined,
-            }),
-        )
-    }, [dispatch, returnFilters.PageSize, selectedShippingProviderId, workMode])
+        dispatch(setReturnFilters(nextFilters))
+        void dispatch(loadReturnStats({}))
+        void dispatch(fetchReturnList(nextFilters))
+    }, [dispatch, returnPageSize, workflowShippingUnitId, workMode])
     //#endregion effects
-    
+
     //#region render
     return (
         <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900">
@@ -221,6 +258,13 @@ export function WorkplacePage() {
                         <ModeSelector value={workMode} onChange={handleModeChange} />
                     </section>
 
+                    <section className="border-b border-slate-200 p-4">
+                        <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Loại mã quét
+                        </div>
+                        <ScanTypeSelector value={scanInputType} onChange={handleScanTypeChange} />
+                    </section>
+
                     {shouldShowShippingProvider ? (
                         <section className="border-b border-slate-200 p-4">
                             <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -229,17 +273,10 @@ export function WorkplacePage() {
                             <ShippingProviderSelect
                                 providers={providers}
                                 value={selectedShippingProviderId}
-                                onChange={(provider) => dispatch(setShippingProvider(provider))}
+                                onChange={handleShippingProviderChange}
                             />
                         </section>
                     ) : null}
-
-                    <section className="border-b border-slate-200 p-4">
-                        <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Loại mã quét
-                        </div>
-                        <ScanTypeSelector value={scanInputType} onChange={handleScanTypeChange} />
-                    </section>
 
                     <section className="border-b border-slate-200 p-4">
                         <div className="mb-3 flex items-center justify-between">
@@ -286,7 +323,7 @@ export function WorkplacePage() {
                             </div>
                             <p className="mt-2">
                                 Nhấn Enter sau khi quét. Packing sẽ quét kiện trước, sau đó quét SKU.
-                                Handover và Return bắt buộc chọn đơn vị vận chuyển.
+                                Mã vận đơn tự xác định đơn vị vận chuyển. Các mã còn lại cần chọn đơn vị vận chuyển trước khi quét.
                             </p>
                         </div>
                     </section>
@@ -296,7 +333,7 @@ export function WorkplacePage() {
                     <WorkplaceContent workMode={workMode} />
                 </main>
             </div>
-            
+
             <NotificationViewport />
         </div>
     )

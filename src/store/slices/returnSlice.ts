@@ -24,8 +24,8 @@ const toErrorMessage = (error: unknown, fallback: string): string => {
     return fallback
 }
 
-function hasShippingUnitId(request: { ShippingUnitId?: string }): boolean {
-    return Boolean(request.ShippingUnitId?.trim())
+function requiresShippingUnit(request: { Type: string; ShippingUnitId?: string }): boolean {
+    return request.Type !== 'DELIVERYCODE' && !request.ShippingUnitId?.trim()
 }
 
 function hasReturnItems(request: Pick<IConfirmReturnRequest, 'ListItems'>): boolean {
@@ -33,25 +33,39 @@ function hasReturnItems(request: Pick<IConfirmReturnRequest, 'ListItems'>): bool
 }
 
 function hasContainer(request: Pick<IConfirmReturnRequest, 'ContainerId' | 'ContainerCode'>): boolean {
-    return request.ContainerId > 0 && request.ContainerCode.trim().length > 0
+    return Boolean(request.ContainerId && request.ContainerId > 0 && request.ContainerCode?.trim())
 }
 
 function getRecordKey(record: IReturnRecord): string {
-    return record.Id || record.DeliveryCode || record.PackageCode || record.OrderCode
+    return (
+        record.DeliveryCode ||
+        record.PackageCode ||
+        record.OrderCode ||
+        record.Id ||
+        ''
+    )
 }
 
-function getRecordKeys(records: IReturnRecord[]): string[] {
-    return records.map(getRecordKey).filter((key) => key.trim().length > 0)
+function getRequestKey(request: IRemoveReturnRequest): string {
+    return (
+        request.DeliveryCode ||
+        request.PackageCode ||
+        request.OrderCode ||
+        request.OrderCodeRef ||
+        ''
+    )
 }
 
 function prependReturnRecords(
     currentRecords: IReturnRecord[],
     newRecords: IReturnRecord[],
 ): IReturnRecord[] {
-    const newRecordKeys = new Set(getRecordKeys(newRecords))
-    const filteredCurrentRecords = currentRecords.filter(
-        (record) => !newRecordKeys.has(getRecordKey(record)),
-    )
+    const newRecordKeys = new Set(newRecords.map(getRecordKey))
+    const filteredCurrentRecords = currentRecords.filter((record) => {
+        const key = getRecordKey(record)
+
+        return !key || !newRecordKeys.has(key)
+    })
 
     return [...newRecords, ...filteredCurrentRecords]
 }
@@ -65,6 +79,7 @@ const defaultFilters: IReturnFilters = {
 
 export interface IReturnState {
     activeReturn: IReturnDetail | null
+    activeScanPayload: IGetReturnDetailRequest | null
     records: IReturnRecord[]
     totalRows: number
     filters: IReturnFilters
@@ -79,6 +94,7 @@ export interface IReturnState {
 
 const initialState: IReturnState = {
     activeReturn: null,
+    activeScanPayload: null,
     records: [],
     totalRows: 0,
     filters: defaultFilters,
@@ -96,8 +112,10 @@ const initialState: IReturnState = {
 export const loadReturnDetail = createAppAsyncThunk(
     'returnDelivery/loadReturnDetail',
     async (request: IGetReturnDetailRequest, { rejectWithValue }) => {
-        if (!hasShippingUnitId(request)) {
-            return rejectWithValue('Vui lòng chọn đơn vị vận chuyển trước khi nhận hoàn')
+        if (requiresShippingUnit(request)) {
+            return rejectWithValue(
+                'Mã này cần chọn đơn vị vận chuyển trước khi nhận hoàn. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
+            )
         }
 
         try {
@@ -111,8 +129,10 @@ export const loadReturnDetail = createAppAsyncThunk(
 export const confirmReturn = createAppAsyncThunk(
     'returnDelivery/confirmReturn',
     async (request: IConfirmReturnRequest, { rejectWithValue }) => {
-        if (!hasShippingUnitId(request)) {
-            return rejectWithValue('Vui lòng chọn đơn vị vận chuyển trước khi xác nhận hoàn')
+        if (requiresShippingUnit(request)) {
+            return rejectWithValue(
+                'Mã này cần chọn đơn vị vận chuyển trước khi xác nhận hoàn. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
+            )
         }
 
         if (!hasContainer(request)) {
@@ -134,8 +154,10 @@ export const confirmReturn = createAppAsyncThunk(
 export const confirmReturnNoLayout = createAppAsyncThunk(
     'returnDelivery/confirmReturnNoLayout',
     async (request: IConfirmReturnRequest, { rejectWithValue }) => {
-        if (!hasShippingUnitId(request)) {
-            return rejectWithValue('Vui lòng chọn đơn vị vận chuyển trước khi xác nhận hoàn')
+        if (requiresShippingUnit(request)) {
+            return rejectWithValue(
+                'Mã này cần chọn đơn vị vận chuyển trước khi xác nhận hoàn. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
+            )
         }
 
         if (!hasReturnItems(request)) {
@@ -143,13 +165,11 @@ export const confirmReturnNoLayout = createAppAsyncThunk(
         }
 
         try {
-            return await returnService.confirmReturnNoLayout({
-                ...request,
-                ContainerId: 0,
-                ContainerCode: '',
-            })
+            return await returnService.confirmReturnNoLayout(request)
         } catch (error) {
-            return rejectWithValue(toErrorMessage(error, 'Không thể xác nhận hàng hoàn không layout'))
+            return rejectWithValue(
+                toErrorMessage(error, 'Không thể xác nhận hàng hoàn không layout'),
+            )
         }
     },
 )
@@ -157,8 +177,10 @@ export const confirmReturnNoLayout = createAppAsyncThunk(
 export const removeReturnRecord = createAppAsyncThunk(
     'returnDelivery/removeReturnRecord',
     async (request: IRemoveReturnRequest, { rejectWithValue }) => {
-        if (!hasShippingUnitId(request)) {
-            return rejectWithValue('Vui lòng chọn đơn vị vận chuyển trước khi xóa hàng hoàn')
+        if (requiresShippingUnit(request)) {
+            return rejectWithValue(
+                'Mã này cần chọn đơn vị vận chuyển trước khi xóa hàng hoàn. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
+            )
         }
 
         try {
@@ -203,6 +225,7 @@ const returnSlice = createSlice({
 
         clearActiveReturn(state) {
             state.activeReturn = null
+            state.activeScanPayload = null
             state.error = null
         },
 
@@ -225,6 +248,7 @@ const returnSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
+            //#region load return detail
             .addCase(loadReturnDetail.pending, (state) => {
                 state.isLoadingDetail = true
                 state.error = null
@@ -232,13 +256,15 @@ const returnSlice = createSlice({
             .addCase(loadReturnDetail.fulfilled, (state, action) => {
                 state.isLoadingDetail = false
                 state.activeReturn = action.payload
+                state.activeScanPayload = action.meta.arg
             })
             .addCase(loadReturnDetail.rejected, (state, action) => {
                 state.isLoadingDetail = false
                 state.error = action.payload ?? 'Không thể tải chi tiết hàng hoàn'
-                state.activeReturn = null
             })
+            //#endregion load return detail
 
+            //#region confirm return
             .addCase(confirmReturn.pending, (state) => {
                 state.isConfirming = true
                 state.error = null
@@ -246,20 +272,17 @@ const returnSlice = createSlice({
             .addCase(confirmReturn.fulfilled, (state, action) => {
                 state.isConfirming = false
                 state.activeReturn = null
-
-                const beforeCount = state.records.length
-
+                state.activeScanPayload = null
                 state.records = prependReturnRecords(state.records, action.payload)
-
-                const addedCount = state.records.length - beforeCount
-
-                state.totalRows = Math.max(state.totalRows + addedCount, state.records.length)
+                state.totalRows += action.payload.length
             })
             .addCase(confirmReturn.rejected, (state, action) => {
                 state.isConfirming = false
                 state.error = action.payload ?? 'Không thể xác nhận hàng hoàn'
             })
+            //#endregion confirm return
 
+            //#region confirm return no layout
             .addCase(confirmReturnNoLayout.pending, (state) => {
                 state.isConfirming = true
                 state.error = null
@@ -267,20 +290,17 @@ const returnSlice = createSlice({
             .addCase(confirmReturnNoLayout.fulfilled, (state, action) => {
                 state.isConfirming = false
                 state.activeReturn = null
-
-                const beforeCount = state.records.length
-
+                state.activeScanPayload = null
                 state.records = prependReturnRecords(state.records, action.payload)
-
-                const addedCount = state.records.length - beforeCount
-
-                state.totalRows = Math.max(state.totalRows + addedCount, state.records.length)
+                state.totalRows += action.payload.length
             })
             .addCase(confirmReturnNoLayout.rejected, (state, action) => {
                 state.isConfirming = false
                 state.error = action.payload ?? 'Không thể xác nhận hàng hoàn không layout'
             })
+            //#endregion confirm return no layout
 
+            //#region remove return record
             .addCase(removeReturnRecord.pending, (state) => {
                 state.isRemoving = true
                 state.error = null
@@ -288,22 +308,26 @@ const returnSlice = createSlice({
             .addCase(removeReturnRecord.fulfilled, (state, action) => {
                 state.isRemoving = false
 
-                const removedCodes = new Set(action.payload)
+                const removedKeys = new Set(action.payload)
+                const requestKey = getRequestKey(action.meta.arg)
                 const beforeCount = state.records.length
 
                 state.records = state.records.filter((record) => {
-                    return !removedCodes.has(record.DeliveryCode)
+                    const recordKey = getRecordKey(record)
+
+                    return !removedKeys.has(recordKey) && recordKey !== requestKey
                 })
 
                 const removedCount = beforeCount - state.records.length
-
                 state.totalRows = Math.max(0, state.totalRows - removedCount)
             })
             .addCase(removeReturnRecord.rejected, (state, action) => {
                 state.isRemoving = false
                 state.error = action.payload ?? 'Không thể xóa record hàng hoàn'
             })
+            //#endregion remove return record
 
+            //#region fetch return list
             .addCase(fetchReturnList.pending, (state) => {
                 state.isFetchingList = true
                 state.error = null
@@ -312,23 +336,19 @@ const returnSlice = createSlice({
                 state.isFetchingList = false
                 state.records = action.payload.Data
                 state.totalRows = action.payload.TotalRows
-
-                if (
-                    state.filters.PageIndex !== action.payload.PageIndex ||
-                    state.filters.PageSize !== action.payload.PageSize
-                ) {
-                    state.filters = {
-                        ...state.filters,
-                        PageIndex: action.payload.PageIndex,
-                        PageSize: action.payload.PageSize,
-                    }
+                state.filters = {
+                    ...state.filters,
+                    PageIndex: action.payload.PageIndex,
+                    PageSize: action.payload.PageSize,
                 }
             })
             .addCase(fetchReturnList.rejected, (state, action) => {
                 state.isFetchingList = false
                 state.error = action.payload ?? 'Không thể tải danh sách hàng hoàn'
             })
+            //#endregion fetch return list
 
+            //#region load return stats
             .addCase(loadReturnStats.pending, (state) => {
                 state.isLoadingStats = true
                 state.error = null
@@ -341,6 +361,7 @@ const returnSlice = createSlice({
                 state.isLoadingStats = false
                 state.error = action.payload ?? 'Không thể tải thống kê hàng hoàn'
             })
+        //#endregion load return stats
     },
 })
 //#endregion slice

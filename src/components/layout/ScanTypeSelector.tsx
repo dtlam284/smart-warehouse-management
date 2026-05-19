@@ -17,11 +17,11 @@ interface IScanTypeSelectorProps {
 const scanTypeOptions: IScanTypeOption[] = [
     {
         type: 'DELIVERYCODE',
-        label: 'Mã kiện',
+        label: 'Mã vận đơn',
     },
     {
         type: 'PACKAGECODE',
-        label: 'Package',
+        label: 'Mã kiện',
     },
     {
         type: 'ORDERCODE',
@@ -29,7 +29,7 @@ const scanTypeOptions: IScanTypeOption[] = [
     },
     {
         type: 'ORDERCODEREF',
-        label: 'Tham chiếu',
+        label: 'Mã tham chiếu',
     },
 ]
 //#endregion constants

@@ -15,12 +15,37 @@ import type {
 } from '@/models/handover/HandoverInterface'
 
 //#region helpers
-function hasShippingUnitId(request: Pick<IUpdateHandoverRequest, 'ShippingUnitId'>): boolean {
-    return request.ShippingUnitId.trim().length > 0
+function requiresShippingUnit(request: { Type: string; ShippingUnitId?: string }): boolean {
+    return request.Type !== 'DELIVERYCODE' && !request.ShippingUnitId?.trim()
 }
 
 function getRecordKey(record: IHandoverRecord): string {
-    return record.Id || record.DeliveryCode || record.PackageCode || record.OrderCode
+    return [
+        record.DeliveryCode,
+        record.PackageCode,
+        record.OrderCode,
+        record.Id,
+    ].find((value): value is string => Boolean(value?.trim())) ?? ''
+}
+
+function getFirstStringValue(value: string | string[] | undefined): string {
+    if (Array.isArray(value)) {
+        return value[0] ?? ''
+    }
+
+    return value ?? ''
+}
+
+function getRequestKey(request: IRemoveHandoverRequest): string {
+    return (
+        getFirstStringValue(request.DeliveryCodes) ||
+        getFirstStringValue(request.DeliveryCodes) ||
+        getFirstStringValue(request.PackageCode) ||
+        getFirstStringValue(request.PackageCode ? request.PackageCode : undefined) ||
+        getFirstStringValue(request.OrderCode) ||
+        getFirstStringValue(request.OrderCodeRef) ||
+        ''
+    )
 }
 
 function getRecordKeys(records: IHandoverRecord[]): string[] {
@@ -75,9 +100,9 @@ const initialState: IHandoverState = {
 export const addHandoverRecord = createAppAsyncThunk(
     'handover/addHandoverRecord',
     async (request: IUpdateHandoverRequest, { rejectWithValue }) => {
-        if (!hasShippingUnitId(request)) {
+        if (requiresShippingUnit(request)) {
             return rejectWithValue(
-                'Please select a shipping unit before delivery. (Vui lòng chọn đơn vị vận chuyển trước khi bàn giao.)',
+                'Mã này cần chọn đơn vị vận chuyển trước khi bàn giao. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
             )
         }
 
@@ -94,9 +119,9 @@ export const addHandoverRecord = createAppAsyncThunk(
 export const removeHandoverRecord = createAppAsyncThunk(
     'handover/removeHandoverRecord',
     async (request: IRemoveHandoverRequest, { rejectWithValue }) => {
-        if (!hasShippingUnitId(request)) {
+        if (requiresShippingUnit(request)) {
             return rejectWithValue(
-                'Please select a shipping unit before deleting the handover. (Vui lòng chọn đơn vị vận chuyển trước khi xóa bàn giao.)',
+                'Mã này cần chọn đơn vị vận chuyển trước khi xóa bàn giao. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
             )
         }
 
@@ -104,7 +129,10 @@ export const removeHandoverRecord = createAppAsyncThunk(
             return await handoverService.removeHandoverRecord(request)
         } catch (error) {
             return rejectWithValue(
-                toErrorMessage(error, 'Unable to delete handover record. (Không thể xóa record bàn giao.)'),
+                toErrorMessage(
+                    error,
+                    'Unable to delete handover record. (Không thể xóa record bàn giao.)',
+                ),
             )
         }
     },
@@ -117,7 +145,10 @@ export const fetchHandoverList = createAppAsyncThunk(
             return await handoverService.getHandoverList(request)
         } catch (error) {
             return rejectWithValue(
-                toErrorMessage(error, 'Unable to load handover list. (Không thể tải danh sách bàn giao.)'),
+                toErrorMessage(
+                    error,
+                    'Unable to load handover list. (Không thể tải danh sách bàn giao.)',
+                ),
             )
         }
     },
@@ -130,7 +161,10 @@ export const loadHandoverStats = createAppAsyncThunk(
             return await handoverService.getHandoverStats(request)
         } catch (error) {
             return rejectWithValue(
-                toErrorMessage(error, 'Unable to load handover statistics. (Không thể tải thống kê bàn giao.)'),
+                toErrorMessage(
+                    error,
+                    'Unable to load handover statistics. (Không thể tải thống kê bàn giao.)',
+                ),
             )
         }
     },
@@ -191,11 +225,14 @@ const handoverSlice = createSlice({
             .addCase(removeHandoverRecord.fulfilled, (state, action) => {
                 state.isRemoving = false
 
-                const removedCodes = new Set(action.payload)
+                const removedKeys = new Set(action.payload)
+                const requestKey = getRequestKey(action.meta.arg)
                 const beforeCount = state.records.length
 
                 state.records = state.records.filter((record) => {
-                    return !removedCodes.has(record.DeliveryCode)
+                    const recordKey = getRecordKey(record)
+
+                    return !removedKeys.has(recordKey) && recordKey !== requestKey
                 })
 
                 const removedCount = beforeCount - state.records.length
@@ -212,21 +249,12 @@ const handoverSlice = createSlice({
             })
             .addCase(fetchHandoverList.fulfilled, (state, action) => {
                 state.isFetchingList = false
-
-                if (action.payload.Data.length > 0 || state.records.length === 0) {
-                    state.records = action.payload.Data
-                    state.totalRows = action.payload.TotalRows
-                }
-
-                if (
-                    state.filters.PageIndex !== action.payload.PageIndex ||
-                    state.filters.PageSize !== action.payload.PageSize
-                ) {
-                    state.filters = {
-                        ...state.filters,
-                        PageIndex: action.payload.PageIndex,
-                        PageSize: action.payload.PageSize,
-                    }
+                state.records = action.payload.Data
+                state.totalRows = action.payload.TotalRows
+                state.filters = {
+                    ...state.filters,
+                    PageIndex: action.payload.PageIndex,
+                    PageSize: action.payload.PageSize,
                 }
             })
             .addCase(fetchHandoverList.rejected, (state, action) => {
