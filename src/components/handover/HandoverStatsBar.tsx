@@ -1,37 +1,68 @@
 import { EmptyState, Spinner } from '@/components/ui'
 import { cn } from '@/components/ui/utils'
 import { useAppSelector } from '@/store'
+import { selectSelectedShippingProviderId } from '@/store/selectors/appSelectors'
 import {
     selectIsLoadingHandoverStats,
     selectProviderProgressList,
-    selectTotalHandoverCount,
-    selectTotalHandoverSalesOrderCount,
 } from '@/store/selectors/handoverSelectors'
-import { selectSelectedShippingProviderId } from '@/store/selectors/appSelectors'
+import {
+    selectIsLoadingShippingProviders,
+    selectShippingProviders,
+} from '@/store/selectors/warehouseSelectors'
 import type { IProviderProgress } from '@/models/handover/HandoverInterface'
+import type { IShippingProvider } from '@/models/warehouse/WarehouseInterface'
 
 //#region helpers
-function getProgressPercent(progress: IProviderProgress): number {
-    if (progress.TotalSalesOrder <= 0) {
-        return 0
+interface IHandoverProviderStatViewModel {
+    ShippingUnitId: string
+    Name: string
+    TotalHandover: number
+}
+
+function buildProviderStats(
+    providers: IShippingProvider[],
+    stats: IProviderProgress[],
+): IHandoverProviderStatViewModel[] {
+    const statsByProviderId = new Map(
+        stats.map((stat) => [stat.ShippingUnitId, stat]),
+    )
+
+    if (providers.length > 0) {
+        return providers.map((provider) => {
+            const stat = statsByProviderId.get(provider.Id)
+
+            return {
+                ShippingUnitId: provider.Id,
+                Name: provider.Name,
+                TotalHandover: stat?.TotalHandover ?? 0,
+            }
+        })
     }
 
-    return Math.min(100, Math.round((progress.TotalHandover / progress.TotalSalesOrder) * 100))
+    return stats.map((stat) => ({
+        ShippingUnitId: stat.ShippingUnitId,
+        Name: stat.Name,
+        TotalHandover: stat.TotalHandover,
+    }))
 }
 //#endregion helpers
 
 //#region component
 export function HandoverStatsBar() {
-    const progressList = useAppSelector(selectProviderProgressList)
+    const providers = useAppSelector(selectShippingProviders)
+    const stats = useAppSelector(selectProviderProgressList)
     const isLoadingStats = useAppSelector(selectIsLoadingHandoverStats)
+    const isLoadingProviders = useAppSelector(selectIsLoadingShippingProviders)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
-    const totalHandoverCount = useAppSelector(selectTotalHandoverCount)
-    const totalSalesOrderCount = useAppSelector(selectTotalHandoverSalesOrderCount)
 
-    if (isLoadingStats) {
+    const isLoading = isLoadingStats || isLoadingProviders
+    const providerStats = buildProviderStats(providers, stats)
+
+    if (isLoading) {
         return (
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
+            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-slate-500">
                     <Spinner size="sm" />
                     Đang tải thống kê bàn giao...
                 </div>
@@ -39,78 +70,52 @@ export function HandoverStatsBar() {
         )
     }
 
-    if (progressList.length === 0) {
+    if (providerStats.length === 0) {
         return (
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <EmptyState
-                    icon='🚚'
-                    title="Chưa có thống kê bàn giao"
-                    // description="Thống kê sẽ hiển thị sau khi dữ liệu bàn giao được tải."
-                />
+            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <EmptyState icon="🚚" title="Chưa có thống kê bàn giao" />
             </section>
         )
     }
 
+    //#region render
     return (
-        <section className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {progressList.map((progress) => {
-                    const percent = getProgressPercent(progress)
-                    const isActive = selectedShippingProviderId === progress.ShippingUnitId
+        <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex w-full flex-nowrap gap-3">
+                {providerStats.map((stat) => {
+                    const isActive = selectedShippingProviderId === stat.ShippingUnitId
 
                     return (
                         <div
-                            key={progress.ShippingUnitId}
+                            key={stat.ShippingUnitId}
                             className={cn(
-                                'rounded-lg border bg-white p-4 shadow-sm transition-colors',
-                                isActive
-                                    ? 'border-green-500 bg-green-50'
-                                    : 'border-slate-200',
+                                'min-w-0 flex-1 basis-0 rounded-lg border bg-white px-4 py-3 shadow-sm transition-colors',
+                                isActive ? 'border-green-500 bg-green-50' : 'border-slate-200',
                             )}
                         >
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <div className="text-xl font-extrabold text-slate-900">
-                                        {progress.TotalHandover}
-                                        <span className="ml-1 text-sm font-medium text-slate-400">
-                                            / {progress.TotalSalesOrder}
-                                        </span>
-                                    </div>
-
-                                    <div
-                                        className={cn(
-                                            'mt-1 truncate text-xs',
-                                            isActive ? 'font-semibold text-green-700' : 'text-slate-400',
-                                        )}
-                                    >
-                                        🚚 {progress.Name}
-                                    </div>
-                                </div>
-
-                                {isActive ? (
-                                    <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-700">
-                                        Đang chọn
-                                    </span>
-                                ) : null}
+                            <div
+                                className={cn(
+                                    'text-xl font-extrabold',
+                                    isActive ? 'text-green-700' : 'text-slate-900',
+                                )}
+                            >
+                                {stat.TotalHandover}
                             </div>
 
-                            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                                <div
-                                    className="h-full rounded-full bg-green-600 transition-all"
-                                    style={{ width: `${percent}%` }}
-                                />
+                            <div
+                                className={cn(
+                                    'mt-1 truncate text-xs font-semibold',
+                                    isActive ? 'text-green-700' : 'text-slate-400',
+                                )}
+                            >
+                                🚚 {stat.Name}
                             </div>
                         </div>
                     )
                 })}
             </div>
-
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-                Tổng hôm nay:{' '}
-                <span className="font-bold text-green-700">{totalHandoverCount}</span>
-                <span className="text-slate-400"> / {totalSalesOrderCount} đơn</span>
-            </div>
         </section>
     )
+    //#endregion render
 }
 //#endregion component

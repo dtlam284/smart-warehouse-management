@@ -40,9 +40,10 @@ export function ReturnStatsBar() {
         )
     }
 
+    //#region render
     return (
-        <section className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex w-full flex-nowrap gap-3">
                 {stats.map((stat: IReturnProviderStats) => {
                     const isActive = selectedShippingProviderId === stat.ShippingUnitId
 
@@ -50,42 +51,38 @@ export function ReturnStatsBar() {
                         <div
                             key={stat.ShippingUnitId}
                             className={cn(
-                                'rounded-lg border bg-white p-4 shadow-sm transition-colors',
-                                isActive
-                                    ? 'border-purple-500 bg-purple-50'
-                                    : 'border-slate-200',
+                                'min-w-0 flex-1 basis-0 rounded-lg border bg-white px-4 py-3 shadow-sm transition-colors',
+                                isActive ? 'border-purple-500 bg-purple-50' : 'border-slate-200',
                             )}
                         >
-                            <div className="text-xl font-extrabold text-slate-900">
+                            <div
+                                className={cn(
+                                    'text-xl font-extrabold',
+                                    isActive ? 'text-purple-700' : 'text-slate-900',
+                                )}
+                            >
                                 {stat.TotalReturn}
                             </div>
 
                             <div
                                 className={cn(
-                                    'mt-1 truncate text-xs',
-                                    isActive ? 'font-semibold text-purple-700' : 'text-slate-400',
+                                    'mt-1 truncate text-xs font-semibold',
+                                    isActive ? 'text-purple-700' : 'text-slate-400',
                                 )}
                             >
                                 ↩️ {stat.Name}
                             </div>
-
-                            {isActive ? (
-                                <div className="mt-3">
-                                    <span className="rounded-full bg-purple-100 px-2 py-1 text-xs font-bold text-purple-700">
-                                        Đang chọn
-                                    </span>
-                                </div>
-                            ) : null}
                         </div>
                     )
                 })}
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+            {/* <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
                 Tổng đơn hoàn hôm nay:{' '}
                 <span className="font-bold text-purple-700">{totalReturnCount}</span>
-            </div>
+            </div> */}
         </section>
     )
+    //#endregion render
 }
 //#endregion component
