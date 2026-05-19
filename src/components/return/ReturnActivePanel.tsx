@@ -3,6 +3,7 @@ import { Button, ErrorMessage, Spinner } from '@/components/ui'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     selectActiveReturn,
+    selectActiveReturnScanPayload,
     selectIsConfirmingReturn,
     selectIsLoadingReturnDetail,
     selectReturnError,
@@ -23,7 +24,7 @@ import { ContainerPickerModal, type IReturnContainerValue } from './ContainerPic
 import { ReturnEmptyPanel } from './ReturnEmptyPanel'
 import { ReturnItemRow } from './ReturnItemRow'
 import { ReturnTypeSelector } from './ReturnTypeSelector'
-import type { IConfirmReturnRequest } from '@/models/return/ReturnDTO'
+import type { IConfirmReturnRequest, IGetReturnDetailRequest } from '@/models/return/ReturnDTO'
 import type { IReturnDetail, IReturnProduct, ReturnType } from '@/models/return/ReturnInterface'
 
 //#region types
@@ -37,6 +38,7 @@ type ReturnValidationMap = Record<string, string>
 
 interface IReturnFormProps {
     activeReturn: IReturnDetail
+    activeScanPayload: IGetReturnDetailRequest | null
     hasLayout: boolean
     isConfirming: boolean
     error: string | null
@@ -82,17 +84,37 @@ function applyReturnTypeQuantities(
     }, {})
 }
 
+function getFallbackScanPayload(activeReturn: IReturnDetail): IGetReturnDetailRequest {
+    if (activeReturn.DeliveryCode?.trim()) {
+        return {
+            DeliveryCode: activeReturn.DeliveryCode,
+            Type: 'DELIVERYCODE',
+            ShippingUnitId: activeReturn.ShippingUnitId,
+        }
+    }
+
+    return {
+        OrderCode: activeReturn.OrderCode,
+        Type: 'ORDERCODE',
+        ShippingUnitId: activeReturn.ShippingUnitId,
+    }
+}
+
 function buildReturnRequest(
     activeReturn: IReturnDetail,
+    activeScanPayload: IGetReturnDetailRequest | null,
     returnType: ReturnType,
     quantities: ReturnQuantityMap,
 ): IConfirmReturnRequest {
+    const scanPayload = activeScanPayload ?? getFallbackScanPayload(activeReturn)
+
     return {
-        DeliveryCode: activeReturn.DeliveryCode,
-        Type: 'DELIVERYCODE',
-        ShippingUnitId: activeReturn.ShippingUnitId,
-        ContainerId: 0,
-        ContainerCode: '',
+        DeliveryCode: scanPayload.DeliveryCode,
+        OrderCode: scanPayload.OrderCode,
+        OrderCodeRef: scanPayload.OrderCodeRef,
+        PackageCode: scanPayload.PackageCode,
+        Type: scanPayload.Type,
+        ShippingUnitId: scanPayload.ShippingUnitId || activeReturn.ShippingUnitId,
         ReturnType: returnType,
         ListItems: activeReturn.ListItem.map((item) => {
             const quantity = quantities[getItemKey(item)] ?? {
@@ -156,7 +178,13 @@ function validateReturnForm(
 //#endregion helpers
 
 //#region form
-function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFormProps) {
+function ReturnForm({
+    activeReturn,
+    activeScanPayload,
+    hasLayout,
+    isConfirming,
+    error,
+}: IReturnFormProps) {
     const dispatch = useAppDispatch()
     const returnFilters = useAppSelector(selectReturnFilters)
 
@@ -168,15 +196,6 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
     const [formError, setFormError] = React.useState<string | null>('Vui lòng chọn loại hoàn trả')
     const [containerModalOpen, setContainerModalOpen] = React.useState(false)
     const [pendingRequest, setPendingRequest] = React.useState<IConfirmReturnRequest | null>(null)
-
-    React.useEffect(() => {
-        setReturnType(null)
-        setQuantities(buildInitialQuantities(activeReturn))
-        setValidationErrors({})
-        setFormError('Vui lòng chọn loại hoàn trả')
-        setContainerModalOpen(false)
-        setPendingRequest(null)
-    }, [activeReturn])
 
     const refreshReturnOverview = React.useCallback(() => {
         void dispatch(
@@ -207,11 +226,11 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
     }, [activeReturn.DeliveryCode, activeReturn.OrderCode, dispatch, refreshReturnOverview])
 
     const handleReturnFailure = React.useCallback(
-        (error: unknown) => {
+        (errorValue: unknown) => {
             dispatch(
                 showNotification({
                     type: 'error',
-                    message: getErrorMessage(error, 'Không thể xác nhận hàng hoàn'),
+                    message: getErrorMessage(errorValue, 'Không thể xác nhận hàng hoàn'),
                 }),
             )
         },
@@ -266,7 +285,12 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
             return
         }
 
-        const request = buildReturnRequest(activeReturn, returnType, quantities)
+        const request = buildReturnRequest(
+            activeReturn,
+            activeScanPayload,
+            returnType,
+            quantities,
+        )
 
         if (hasLayout) {
             setPendingRequest(request)
@@ -290,6 +314,7 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
                 ...pendingRequest,
                 ContainerId: container.ContainerId,
                 ContainerCode: container.ContainerCode,
+                Container: container.Container,
             }),
         )
             .unwrap()
@@ -297,7 +322,6 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
             .catch(handleReturnFailure)
     }
 
-    //#region render
     return (
         <>
             <div className="space-y-4">
@@ -422,7 +446,6 @@ function ReturnForm({ activeReturn, hasLayout, isConfirming, error }: IReturnFor
             />
         </>
     )
-    //#endregion render
 }
 //#endregion form
 
@@ -431,6 +454,7 @@ export function ReturnActivePanel() {
     const dispatch = useAppDispatch()
 
     const activeReturn = useAppSelector(selectActiveReturn)
+    const activeScanPayload = useAppSelector(selectActiveReturnScanPayload)
     const isLoadingDetail = useAppSelector(selectIsLoadingReturnDetail)
     const isConfirming = useAppSelector(selectIsConfirmingReturn)
     const error = useAppSelector(selectReturnError)
@@ -448,7 +472,6 @@ export function ReturnActivePanel() {
         return () => window.clearTimeout(timeoutId)
     }, [dispatch, error])
 
-    //#region render
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
@@ -472,8 +495,15 @@ export function ReturnActivePanel() {
 
             {!isLoadingDetail && activeReturn ? (
                 <ReturnForm
-                    key={activeReturn.DeliveryCode || activeReturn.OrderCode}
+                    key={`${activeScanPayload?.Type ?? 'RETURN'}-${
+                        activeScanPayload?.DeliveryCode ??
+                        activeScanPayload?.OrderCode ??
+                        activeScanPayload?.OrderCodeRef ??
+                        activeScanPayload?.PackageCode ??
+                        activeReturn.OrderCode
+                    }`}
                     activeReturn={activeReturn}
+                    activeScanPayload={activeScanPayload}
                     hasLayout={hasLayout}
                     isConfirming={isConfirming}
                     error={error}
@@ -481,6 +511,5 @@ export function ReturnActivePanel() {
             ) : null}
         </section>
     )
-    //#endregion render
 }
 //#endregion component

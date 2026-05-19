@@ -1,11 +1,14 @@
 import * as React from 'react'
-import { Button, Modal, NumberInput } from '@/components/ui'
+import { Button, ErrorMessage, Modal, Spinner } from '@/components/ui'
 import { ScannerInput } from '@/components/scanner/ScannerInput'
+import { warehouseService } from '@/services/warehouse/warehouseService'
+import type { IWarehouseContainer } from '@/models/warehouse/WarehouseInterface'
 
 //#region types
 export interface IReturnContainerValue {
     ContainerId: number
     ContainerCode: string
+    Container: IWarehouseContainer
 }
 
 interface IContainerPickerModalProps {
@@ -24,34 +27,85 @@ export function ContainerPickerModal({
     onConfirm,
 }: IContainerPickerModalProps) {
     const [containerCode, setContainerCode] = React.useState('')
-    const [containerId, setContainerId] = React.useState(0)
+    const [container, setContainer] = React.useState<IWarehouseContainer | null>(null)
+    const [isLookingUp, setIsLookingUp] = React.useState(false)
+    const [error, setError] = React.useState<string | null>(null)
 
-    const canConfirm = containerCode.trim().length > 0 && containerId > 0 && !loading
+    const isBusy = loading || isLookingUp
+    const canConfirm = Boolean(container && container.Id > 0 && container.Code.trim()) && !isBusy
+
+    const resetState = () => {
+        setContainerCode('')
+        setContainer(null)
+        setError(null)
+        setIsLookingUp(false)
+    }
+
+    const lookupContainer = async (code: string) => {
+        const normalizedCode = code.trim().toUpperCase()
+
+        if (!normalizedCode) {
+            setError('Vui lòng quét barcode container')
+            return
+        }
+
+        setContainerCode(normalizedCode)
+        setContainer(null)
+        setError(null)
+        setIsLookingUp(true)
+
+        try {
+            const nextContainer = await warehouseService.getContainerByCode(normalizedCode)
+
+            setContainer(nextContainer)
+            setContainerCode(nextContainer.Code || normalizedCode)
+        } catch (lookupError) {
+            const message =
+                lookupError instanceof Error && lookupError.message.trim().length > 0
+                    ? lookupError.message
+                    : 'Không tìm thấy thông tin thùng chứa'
+
+            setError(message)
+        } finally {
+            setIsLookingUp(false)
+        }
+    }
 
     const handleContainerScan = (code: string) => {
-        setContainerCode(code.trim().toUpperCase())
+        void lookupContainer(code)
     }
 
     const handleConfirm = () => {
-        if (!canConfirm) {
+        if (!canConfirm || !container) {
             return
         }
 
         onConfirm({
-            ContainerId: containerId,
-            ContainerCode: containerCode.trim().toUpperCase(),
+            ContainerId: container.Id,
+            ContainerCode: container.Code,
+            Container: container,
         })
     }
 
+    const handleClose = () => {
+        if (isBusy) {
+            return
+        }
+
+        resetState()
+        onClose()
+    }
+
+    //#region render
     return (
         <Modal
             open={open}
-            onClose={onClose}
+            onClose={handleClose}
             title="Quét đơn vị chứa"
             description="Kho đang vận hành có layout, cần quét container trước khi xác nhận hàng hoàn."
             footer={
                 <div className="flex w-full justify-end gap-2">
-                    <Button variant="secondary" disabled={loading} onClick={onClose}>
+                    <Button variant="secondary" disabled={isBusy} onClick={handleClose}>
                         Hủy
                     </Button>
 
@@ -69,7 +123,7 @@ export function ContainerPickerModal({
 
                     <ScannerInput
                         autoFocus
-                        disabled={loading}
+                        disabled={isBusy}
                         placeholder="Quét barcode container..."
                         onScan={handleContainerScan}
                     />
@@ -84,16 +138,63 @@ export function ContainerPickerModal({
                     ) : null}
                 </div>
 
-                <NumberInput
-                    label="Container ID"
-                    value={containerId}
-                    min={0}
-                    disabled={loading}
-                    helperText="Tạm thời nhập ContainerId thủ công. Sau này có thể thay bằng API lookup container."
-                    onChange={setContainerId}
-                />
+                {isLookingUp ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                        <Spinner size="sm" />
+                        Đang kiểm tra thông tin đơn vị chứa...
+                    </div>
+                ) : null}
+
+                {container ? (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                        <div className="mb-2 font-semibold text-emerald-700">
+                            Đã tìm thấy đơn vị chứa
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            <div>
+                                <div className="text-xs font-semibold uppercase text-emerald-500">
+                                    Mã
+                                </div>
+                                <div className="font-mono font-semibold text-emerald-900">
+                                    {container.Code}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="text-xs font-semibold uppercase text-emerald-500">
+                                    ID
+                                </div>
+                                <div className="font-semibold text-emerald-900">
+                                    {container.Id}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="text-xs font-semibold uppercase text-emerald-500">
+                                    Phân loại
+                                </div>
+                                <div className="font-semibold text-emerald-900">
+                                    {container.Type || '-'}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="text-xs font-semibold uppercase text-emerald-500">
+                                    Trạng thái
+                                </div>
+                                <div className="font-semibold text-emerald-900">
+                                    {container.Status || '-'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                <ErrorMessage message={error} />
             </div>
-        </Modal>
+        </Modal>    
     )
+    //#endregion render
 }
 //#endregion component

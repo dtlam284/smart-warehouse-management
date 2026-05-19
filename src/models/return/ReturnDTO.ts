@@ -1,4 +1,5 @@
 import type { ScanInputType } from '@/models/common/CommonInterface'
+import type { IWarehouseContainer } from '@/models/warehouse/WarehouseInterface'
 import type { IReturnItemPayload, ReturnType } from './ReturnInterface'
 
 export interface IGetReturnDetailRequest {
@@ -17,8 +18,9 @@ export interface IConfirmReturnRequest {
     PackageCode?: string
     Type: ScanInputType
     ShippingUnitId: string
-    ContainerId: number
-    ContainerCode: string
+    ContainerId?: number
+    ContainerCode?: string
+    Container?: IWarehouseContainer
     ReturnType: ReturnType
     ListItems: IReturnItemPayload[]
 }

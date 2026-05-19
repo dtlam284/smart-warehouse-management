@@ -20,6 +20,8 @@ export interface IShippingProvider {
     Name: string
     Code?: string
     LadingCode?: string
+    IndexDisplay?: number
+    Priority?: number
 }
 
 export interface IShippingProvidersResponse {
@@ -27,4 +29,31 @@ export interface IShippingProvidersResponse {
     Message?: string
     Data?: IShippingProvider[]
     Result: IShippingProvider[]
+}
+
+export interface IWarehouseContainer {
+    Id: number
+    WarehouseItemId?: string | null
+    CustomerId?: string | null
+    CustomerName?: string | null
+    Type: string
+    Code: string
+    QRCode?: string | null
+    WarehouseItemLayoutId?: string | null
+    WarehouseItemLayoutCode?: string | null
+    WarehouseItemLayoutPath?: string | null
+    Status?: string | null
+    Usage?: string | null
+    Putaway?: boolean
+    Description?: string | null
+    HasProduct?: boolean
+    FreezeStatus?: boolean
+    ContainerDetail?: unknown[]
+}
+
+export interface IWarehouseContainerResponse {
+    Code?: number
+    Message?: string
+    Detail?: string | null
+    Data?: IWarehouseContainer | null
 }

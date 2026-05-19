@@ -11,39 +11,39 @@ export const API_ENDPOINTS = {
     //#region auth endpoints
     auth: {
         login: 'api/v3/account/login',
-        loginEmail: 'api/v3/account/login', // TODO: replace with real endpoint
+        loginEmail: 'api/v3/account/login',
         register: 'api/account/register-cms',
         activate: 'api/account/confirm-account',
         resendOtp: 'api/account/resend-confirm-account',
         forgotPassword: 'api/account/forgot-password',
         resetPassword: 'api/account/reset-password',
         refresh: '/auth/refresh',
-        logout: 'api/account/logout', // TODO: replace with real endpoint
-        logoutAll: '/auth/logout/all', // TODO: replace with real endpoint
-        me: '/auth/me', // TODO: replace with real endpoint
-        sessions: '/auth/sessions', // TODO: replace with real endpoint
-        sessionById: (id: ApiEntityId): string => withId('/auth/sessions', id), // TODO: replace with real endpoint
+        logout: '/api/account/logout',
+        logoutAll: '/auth/logout/all',
+        me: '/auth/me',
+        sessions: '/auth/sessions',
+        sessionById: (id: ApiEntityId): string => withId('/auth/sessions', id),
     },
     //#endregion auth endpoints
 
     //#region tenant endpoints
     tenant: {
-        list: 'api/account/get-list-tenant', // TODO: replace with real endpoint
-        select: 'api/account/select-tenant', // TODO: replace with real endpoint
+        list: 'api/account/get-list-tenant',
+        select: 'api/account/select-tenant',
     },
     //#endregion tenant endpoints
 
     //#region role endpoints
     role: {
-        select: 'api/account/select-funtion', // TODO: replace with real endpoint
+        select: 'api/account/select-funtion',
     },
     //#endregion role endpoints
 
     //#region agent endpoints
     agent: {
-        list: 'api/distributor/get-by-page-access', // TODO: replace with real endpoint
+        list: 'api/distributor/get-by-page-access',
         selectWorkgroup: (type: 'ADMIN' = 'ADMIN'): string =>
-            `api/account/select-workgroup?type=${type}`, // TODO: replace with real endpoint
+            `api/account/select-workgroup?type=${type}`,
     },
     //#endregion agent endpoints
 
@@ -70,7 +70,7 @@ export const API_ENDPOINTS = {
 
     //#region config
     config: {
-        getConfig: 'api/config', // not sure yet
+        getConfig: 'api/config',
     },
     //#endregion config
 
@@ -80,9 +80,16 @@ export const API_ENDPOINTS = {
     },
     //#endregion shipping providers
 
+    //#region warehouse containers
+    containers: {
+        getByCode: (code: string): string =>
+            `api-warehouse/containers/${encodeURIComponent(code)}/get-by-code`,
+    },
+    //#endregion warehouse containers
+
     //#region packing
     packing: {
-        getPackageDetails: 'api-fulfillment/packages/get-package-details',
+        getPackageDetails: 'api/fulfillment/packages/get-package-details',
         updatePacking: 'api/v2/orders/delivery-packing',
         removePacking: 'api/v2/orders/remove-packing',
         packingList: 'api/v2/orders/get-by-page-packing',

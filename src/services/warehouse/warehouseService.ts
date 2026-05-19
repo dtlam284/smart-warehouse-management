@@ -5,6 +5,8 @@ import type {
     GetConfigResponse,
     IShippingProvider,
     IShippingProvidersResponse,
+    IWarehouseContainer,
+    IWarehouseContainerResponse,
     IWarehouseOperationConfig,
 } from '@/models/warehouse/WarehouseInterface'
 
@@ -23,6 +25,24 @@ function parseWarehouseOperationConfig(configs: GetConfigResponse): IWarehouseOp
         HasLayout: layoutConfig?.Values === '1',
     }
 }
+
+function normalizeContainerResponse(
+    response: IWarehouseContainer | IWarehouseContainerResponse,
+): IWarehouseContainer {
+    if ('Data' in response) {
+        if (!response.Data) {
+            throw new Error(response.Message || 'Không tìm thấy thông tin thùng chứa')
+        }
+
+        return response.Data
+    }
+
+    if ('Id' in response && 'Code' in response) {
+        return response
+    }
+
+    throw new Error('Không tìm thấy thông tin thùng chứa')
+}
 //#endregion helpers
 
 //#region services
@@ -32,9 +52,12 @@ export const warehouseService = {
             Key: WAREHOUSE_CONFIG_KEY,
         },
     ): Promise<IWarehouseOperationConfig> {
-        const response = await configApiClient.get<GetConfigResponse>(API_ENDPOINTS.config.getConfig, {
-            query: { ...request },
-        })
+        const response = await configApiClient.get<GetConfigResponse>(
+            API_ENDPOINTS.config.getConfig,
+            {
+                query: { ...request },
+            },
+        )
 
         return parseWarehouseOperationConfig(response)
     },
@@ -62,6 +85,25 @@ export const warehouseService = {
         }
 
         return []
-    }
+    },
+
+    async getContainerByCode(code: string): Promise<IWarehouseContainer> {
+        const normalizedCode = code.trim().toUpperCase()
+
+        if (!normalizedCode) {
+            throw new Error('Vui lòng quét barcode container')
+        }
+
+        const response = await apiClient.get<IWarehouseContainer | IWarehouseContainerResponse>(
+            API_ENDPOINTS.containers.getByCode(normalizedCode),
+            {
+                query: {
+                    Code: normalizedCode,
+                },
+            },
+        )
+
+        return normalizeContainerResponse(response)
+    },
 }
 //#endregion services
