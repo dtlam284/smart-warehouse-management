@@ -1,4 +1,3 @@
-import { RotateCcw } from 'lucide-react'
 import { EmptyState } from '@/components/ui'
 import { useAppSelector } from '@/store'
 import {

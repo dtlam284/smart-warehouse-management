@@ -1,5 +1,3 @@
-import { Boxes, PackageCheck } from 'lucide-react'
-
 import { useAppSelector } from '@/store'
 import {
     selectIsLoadingPackingStats,
