@@ -13,5 +13,20 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: './src/tests/setup.ts',
         globals: true,
+        coverage: {
+            provider: 'v8',
+            include: [
+                'src/store/slices/**/*.{ts,tsx}',
+                'src/store/selectors/**/*.{ts,tsx}',
+                'src/validations/**/*.{ts,tsx}',
+                'src/models/common/**/*.{ts,tsx}',
+            ],
+            exclude: [
+                'src/**/*.d.ts',
+                'src/tests/**',
+                'src/main.tsx',
+                'src/App.tsx',
+            ],
+        },
     },
 })
