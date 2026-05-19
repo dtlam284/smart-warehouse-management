@@ -101,12 +101,12 @@ export function ReturnRecordList() {
             <div className="mb-4 flex items-center justify-between">
                 <div>
                     <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Đơn hoàn đã xác nhận hôm nay
+                        Danh sách hoàn
                     </h2>
                 </div>
 
                 <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
-                    {totalRows} đơn
+                    {totalRows} đơn / kiện
                 </span>
             </div>
 
@@ -125,7 +125,7 @@ export function ReturnRecordList() {
 
             {!isBusy && records.length === 0 ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                    Chưa có đơn hoàn nào được xác nhận
+                    Chưa có đơn / kiện hoàn nào được xác nhận
                 </p>
             ) : null}
 

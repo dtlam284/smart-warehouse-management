@@ -476,7 +476,7 @@ export function ReturnActivePanel() {
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Đơn hàng hoàn trả
+                    Đơn / Kiện hoàn trả
                 </h2>
 
                 <span className="rounded bg-purple-50 px-2 py-1 font-mono text-xs font-semibold text-purple-700">

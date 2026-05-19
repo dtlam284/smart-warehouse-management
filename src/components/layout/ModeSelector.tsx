@@ -23,7 +23,7 @@ const modeOptions: IModeOption[] = [
     {
         mode: 'PACKING',
         title: 'Packing',
-        description: 'Đóng gói đơn hàng',
+        description: 'Đóng gói hàng hóa',
         icon: '📦',
     },
     {

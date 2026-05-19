@@ -95,11 +95,11 @@ export function PackingRecordList() {
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Kiện đã đóng gói hôm nay
+                    Danh sách đóng gói
                 </h2>
 
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                    {totalRows} kiện
+                    {totalRows} đơn/ kiện
                 </span>
             </div>
 
@@ -108,13 +108,13 @@ export function PackingRecordList() {
             {isFetching ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">
                     <Spinner size="sm" />
-                    Đang tải danh sách kiện đã đóng...
+                    Đang tải danh sách đơn / kiện đã đóng...
                 </div>
             ) : null}
 
             {!isFetching && records.length === 0 ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                    Chưa có kiện nào được đóng gói hôm nay
+                    Chưa có đơn / kiện nào được đóng gói
                 </p>
             ) : null}
 

@@ -107,13 +107,13 @@ export function HandoverRecordList() {
                 </div>
 
                 <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
-                    {totalRows} kiện
+                    {totalRows} đơn / kiện
                 </span>
             </div>
 
-            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            {/* <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 💡 Quét mã mới sẽ thêm record lên đầu danh sách. Quét mã đã có sẽ được dedup rồi đưa record mới lên đầu.
-            </div>
+            </div> */}
 
             <ErrorMessage message={error} />
 
@@ -130,7 +130,7 @@ export function HandoverRecordList() {
 
             {!isBusy && records.length === 0 ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                    Chưa có kiện nào được bàn giao
+                    Chưa có đơn / kiện nào được bàn giao
                 </p>
             ) : null}
 

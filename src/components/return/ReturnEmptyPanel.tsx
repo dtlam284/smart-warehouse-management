@@ -5,7 +5,7 @@ export function ReturnEmptyPanel() {
     return (
         <EmptyState
             icon="↩️"
-            title="Chưa có đơn hoàn nào đang xử lý"
+            title="Chưa có đơn / kiện hoàn nào đang xử lý"
             // description="Quét mã đơn hoàn ở panel bên trái để bắt đầu."
         />
     )
