@@ -89,7 +89,7 @@ export const API_ENDPOINTS = {
 
     //#region packing
     packing: {
-        getPackageDetails: 'api/fulfillment/packages/get-package-details',
+        getPackageDetails: 'api-fulfillment/packages/get-package-details', 
         updatePacking: 'api/v2/orders/delivery-packing',
         removePacking: 'api/v2/orders/remove-packing',
         packingList: 'api/v2/orders/get-by-page-packing',
