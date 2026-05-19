@@ -5,9 +5,17 @@ import { useAppDispatch, useAppSelector } from '@/store'
 import { selectScanInputType, selectSelectedShippingProviderId } from '@/store/selectors/appSelectors'
 import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
 import { selectShippingProviders } from '@/store/selectors/warehouseSelectors'
-import { fetchHandoverList, resetHandoverFilters, setHandoverFilters } from '@/store/slices/handoverSlice'
+import {
+    fetchHandoverList,
+    resetHandoverFilters,
+    setHandoverFilters,
+} from '@/store/slices/handoverSlice'
 import type { ScanInputType } from '@/models/common/CommonInterface'
 import type { IHandoverFilters } from '@/models/handover/HandoverInterface'
+
+//#region types
+type CodeByType = Partial<Record<ScanInputType, string>>
+//#endregion types
 
 //#region helpers
 function shouldUseShippingProvider(scanInputType: ScanInputType): boolean {
@@ -17,7 +25,7 @@ function shouldUseShippingProvider(scanInputType: ScanInputType): boolean {
 function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IHandoverFilters> {
     const normalizedCode = code.trim()
 
-    const emptyCodeFilter = {
+    const emptyCodeFilter: Partial<IHandoverFilters> = {
         DeliveryCode: undefined,
         OrderCode: undefined,
         OrderCodeRef: undefined,
@@ -41,16 +49,16 @@ function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IH
                 PackageCode: normalizedCode,
             }
 
-        case 'ORDERCODEREF':
-            return {
-                ...emptyCodeFilter,
-                OrderCodeRef: normalizedCode,
-            }
-
         case 'ORDERCODE':
             return {
                 ...emptyCodeFilter,
                 OrderCode: normalizedCode,
+            }
+
+        case 'ORDERCODEREF':
+            return {
+                ...emptyCodeFilter,
+                OrderCodeRef: normalizedCode,
             }
     }
 }
@@ -63,11 +71,11 @@ function getCodeFilterLabel(scanInputType: ScanInputType): string {
         case 'PACKAGECODE':
             return 'Mã kiện'
 
-        case 'ORDERCODEREF':
-            return 'Mã tham chiếu'
-
         case 'ORDERCODE':
             return 'Mã đơn'
+
+        case 'ORDERCODEREF':
+            return 'Mã tham chiếu'
     }
 }
 
@@ -79,27 +87,20 @@ function getCodeFilterPlaceholder(scanInputType: ScanInputType): string {
         case 'PACKAGECODE':
             return 'Nhập mã kiện...'
 
-        case 'ORDERCODEREF':
-            return 'Nhập mã tham chiếu...'
-
         case 'ORDERCODE':
             return 'Nhập mã đơn...'
+
+        case 'ORDERCODEREF':
+            return 'Nhập mã tham chiếu...'
     }
 }
 
-function getInitialCodeValue(filters: IHandoverFilters, scanInputType: ScanInputType): string {
-    switch (scanInputType) {
-        case 'DELIVERYCODE':
-            return filters.DeliveryCode ?? ''
-
-        case 'PACKAGECODE':
-            return filters.PackageCode ?? ''
-
-        case 'ORDERCODEREF':
-            return filters.OrderCodeRef ?? ''
-
-        case 'ORDERCODE':
-            return filters.OrderCode ?? ''
+function getInitialCodeByType(filters: IHandoverFilters): CodeByType {
+    return {
+        DELIVERYCODE: filters.DeliveryCode ?? '',
+        PACKAGECODE: filters.PackageCode ?? '',
+        ORDERCODE: filters.OrderCode ?? '',
+        ORDERCODEREF: filters.OrderCodeRef ?? '',
     }
 }
 //#endregion helpers
@@ -114,16 +115,26 @@ export function HandoverFilterBar() {
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
     const [date, setDate] = React.useState(filters.Date ?? '')
-    const [code, setCode] = React.useState(() => getInitialCodeValue(filters, scanInputType))
+    const [codeByType, setCodeByType] = React.useState<CodeByType>(() =>
+        getInitialCodeByType(filters),
+    )
 
     const shouldShowShippingProvider = shouldUseShippingProvider(scanInputType)
     const effectiveShippingUnitId = shouldShowShippingProvider
         ? selectedShippingProviderId || filters.ShippingUnitId || ''
         : ''
+    const currentCode = codeByType[scanInputType] ?? ''
+
+    const handleCodeChange = (value: string) => {
+        setCodeByType((current) => ({
+            ...current,
+            [scanInputType]: value,
+        }))
+    }
 
     const buildFilters = (shippingUnitId = effectiveShippingUnitId): IHandoverFilters => ({
         ...filters,
-        ...buildCodeFilter(scanInputType, code),
+        ...buildCodeFilter(scanInputType, currentCode),
         PageIndex: 1,
         PageSize: filters.PageSize,
         Date: date.trim() || undefined,
@@ -154,13 +165,14 @@ export function HandoverFilterBar() {
         }
 
         setDate('')
-        setCode('')
+        setCodeByType({})
 
         dispatch(resetHandoverFilters())
         dispatch(setHandoverFilters(resetFilters))
         void dispatch(fetchHandoverList(resetFilters))
     }
 
+    //#region render
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
@@ -183,13 +195,14 @@ export function HandoverFilterBar() {
                     onChange={(event) => setDate(event.target.value)}
                 />
 
-                <Input
-                    label={getCodeFilterLabel(scanInputType)}
-                    placeholder={getCodeFilterPlaceholder(scanInputType)}
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                />
-
+                <div key={`code-filter-${scanInputType}`}>
+                    <Input
+                        label={getCodeFilterLabel(scanInputType)}
+                        placeholder={getCodeFilterPlaceholder(scanInputType)}
+                        value={currentCode}
+                        onChange={(event) => handleCodeChange(event.target.value)}
+                    />
+                </div>
                 {shouldShowShippingProvider ? (
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-semibold text-slate-700">
@@ -216,5 +229,6 @@ export function HandoverFilterBar() {
             </div>
         </section>
     )
+    //#endregion render
 }
 //#endregion component
