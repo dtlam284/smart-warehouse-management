@@ -67,7 +67,7 @@ export function ReturnStatsSection() {
 
             <div className="grid gap-4 md:grid-cols-4">
                 <StatsCard
-                    title="Hôm nay nhận hoàn"
+                    title="Đã nhận hoàn"
                     value={totalReturn}
                     // subtitle="đơn hoàn"
                     loading={isLoading}
@@ -94,6 +94,7 @@ export function ReturnStatsSection() {
                     // subtitle="hàng lỗi"
                     loading={isLoading}
                 />
+
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

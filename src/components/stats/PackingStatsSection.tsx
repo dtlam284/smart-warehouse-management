@@ -53,7 +53,7 @@ export function PackingStatsSection() {
 
             <div className="grid gap-4 md:grid-cols-3">
                 <StatsCard
-                    title="Hôm nay đóng gói"
+                    title="Đã đóng gói"
                     value={totalPacking}
                     // subtitle="kiện đã đóng"
                     loading={isLoading}
@@ -61,7 +61,7 @@ export function PackingStatsSection() {
                 />
 
                 <StatsCard
-                    title="Tổng đơn hàng"
+                    title="Tổng đóng gói"
                     value={totalSalesOrder}
                     // subtitle="đơn trong phạm vi thống kê"
                     loading={isLoading}

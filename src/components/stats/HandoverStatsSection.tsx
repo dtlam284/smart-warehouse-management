@@ -6,7 +6,7 @@ import {
     selectTotalHandoverCount,
     selectTotalHandoverSalesOrderCount,
 } from '@/store/selectors/handoverSelectors'
-import { ProviderProgressBar } from './ProviderProgressBar'
+// import { ProviderProgressBar } from './ProviderProgressBar'
 import { StatsCard } from './StatsCard'
 
 //#region component
@@ -40,7 +40,7 @@ export function HandoverStatsSection() {
                 />
 
                 <StatsCard
-                    title="Tổng đơn"
+                    title="Tổng bàn giao"
                     value={totalSalesOrder}
                     // subtitle="đơn cần đối chiếu"
                     loading={isLoading}
@@ -48,36 +48,46 @@ export function HandoverStatsSection() {
                 />
             </div>
 
-            <div className="grid gap-3 xl:grid-cols-2">
-                {isLoading
-                    ? Array.from({ length: 4 }).map((_, index) => (
-                          <ProviderProgressBar
-                              key={index}
-                              providerName=""
-                              current={0}
-                              total={0}
-                              loading
-                          />
-                      ))
-                    : null}
+             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Theo đơn vị vận chuyển
+                </h3>
+
+                {isLoading ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                        {Array.from({ length: 3 }).map((_, index) => (
+                            <div
+                                key={index}
+                                className="h-20 animate-pulse rounded-lg bg-slate-100"
+                            />
+                        ))}
+                    </div>
+                ) : null}
 
                 {!isLoading && providerStats.length === 0 ? (
                     <EmptyState
-                        title="Chưa có thống kê bàn giao"
-                        // description="Không có dữ liệu bàn giao cho ngày đang chọn."
+                        title="Chưa có thống kê hàng hoàn"
+                        description="Không có dữ liệu bàn giao cho ngày đang chọn."
                     />
                 ) : null}
 
-                {!isLoading
-                    ? providerStats.map((provider) => (
-                          <ProviderProgressBar
-                              key={provider.ShippingUnitId || provider.Name}
-                              providerName={provider.Name || '-'}
-                              current={provider.TotalHandover}
-                              total={provider.TotalSalesOrder}
-                          />
-                      ))
-                    : null}
+                {!isLoading && providerStats.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                        {providerStats.map((provider) => (
+                            <div
+                                key={provider.ShippingUnitId || provider.Name}
+                                className="rounded-lg border border-slate-200 bg-purple-50 p-4"
+                            >
+                                <p className="text-2xl font-black text-purple-700">
+                                    {provider.TotalHandover}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-700">
+                                    {provider.Name || '-'}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
             </div>
         </section>
     )
