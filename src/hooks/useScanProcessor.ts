@@ -8,8 +8,15 @@ import {
     selectWorkMode,
 } from '@/store/selectors/appSelectors'
 import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
-import { selectPackingActiveDetail, selectPackingScannedSKUs } from '@/store/selectors/packingSelectors'
-import { addHandoverRecord, fetchHandoverList, removeHandoverRecord } from '@/store/slices/handoverSlice'
+import {
+    selectPackingActiveDetail,
+    selectPackingScannedSKUs,
+} from '@/store/selectors/packingSelectors'
+import {
+    addHandoverRecord,
+    fetchHandoverList,
+    removeHandoverRecord,
+} from '@/store/slices/handoverSlice'
 import { showNotification } from '@/store/slices/notificationSlice'
 import { cancelPacking, incrementSKU, loadPackageDetails } from '@/store/slices/packingSlice'
 import { loadReturnDetail, removeReturnRecord } from '@/store/slices/returnSlice'
@@ -84,20 +91,19 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
     const handlePackingScan = useCallback(
         (code: string) => {
-            const payload = buildScanPayload(code, scanInputType)
+            const payload = buildWorkflowScanPayload(code)
+
+            if (!payload) {
+                return
+            }
 
             if (isRemoveMode) {
-                const removePayload = {
-                    ...payload,
-                    ShippingUnitId: selectedShippingProviderId ?? '',
-                }
-
-                void dispatch(cancelPacking(removePayload))
+                void dispatch(cancelPacking(payload as Parameters<typeof cancelPacking>[0]))
                 return
             }
 
             if (!activeDetail) {
-                void dispatch(loadPackageDetails(payload))
+                void dispatch(loadPackageDetails(payload as Parameters<typeof loadPackageDetails>[0]))
                 return
             }
 
@@ -124,14 +130,7 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
             dispatch(incrementSKU(code))
         },
-        [
-            activeDetail,
-            dispatch,
-            isRemoveMode,
-            scanInputType,
-            scannedSKUs,
-            selectedShippingProviderId,
-        ],
+        [activeDetail, buildWorkflowScanPayload, dispatch, isRemoveMode, scannedSKUs],
     )
 
     const handleHandoverScan = useCallback(

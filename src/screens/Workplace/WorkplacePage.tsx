@@ -57,7 +57,7 @@ function getScannerPlaceholder(
     }
 
     if (workMode === 'PACKING') {
-        return 'Quét mã kiện hoặc SKU...'
+        return 'Quét mã hoặc SKU...'
     }
 
     const placeholderByType: Record<ScanInputType, string> = {
@@ -71,10 +71,7 @@ function getScannerPlaceholder(
 }
 
 function shouldRequireShippingProvider(workMode: WorkMode, scanInputType: ScanInputType): boolean {
-    return (
-        (workMode === 'HANDOVER' || workMode === 'RETURN_DELIVERY') &&
-        scanInputType !== 'DELIVERYCODE'
-    )
+    return workMode !== 'NONE' && scanInputType !== 'DELIVERYCODE'
 }
 //#endregion helpers
 
