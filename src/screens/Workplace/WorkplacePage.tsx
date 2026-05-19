@@ -5,7 +5,6 @@ import {
     HandoverRecordList,
     HandoverStatsBar,
 } from '@/components/handover'
-import { AppHeader } from '@/components/layout/AppHeader'
 import { ModeSelector } from '@/components/layout/ModeSelector'
 import { ScanTypeSelector } from '@/components/layout/ScanTypeSelector'
 import {
@@ -243,9 +242,7 @@ export function WorkplacePage() {
 
     //#region render
     return (
-        <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900">
-            <AppHeader />
-
+        <div className="flex h-full min-h-0 flex-col bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
             <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr] overflow-hidden">
                 <aside className="min-h-0 overflow-y-auto border-r border-slate-200 bg-white">
                     <section className="border-b border-slate-200 p-4">
