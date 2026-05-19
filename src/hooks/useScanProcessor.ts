@@ -36,7 +36,7 @@ type WorkflowScanPayload = ReturnType<typeof buildScanPayload> & {
 
 //#region helpers
 function shouldAttachShippingUnit(scanInputType: ScanInputType): boolean {
-    return scanInputType !== 'DELIVERYCODE'
+    return scanInputType === 'DELIVERYCODE'
 }
 //#endregion helpers
 
@@ -60,7 +60,7 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
     const requireShippingProvider = useCallback((): string | null => {
         if (!selectedShippingProviderId) {
-            setScanError('Vui lòng chọn đơn vị vận chuyển trước khi quét')
+            setScanError('Vui lòng chọn đơn vị vận chuyển trước khi quét mã vận đơn')
             return null
         }
 

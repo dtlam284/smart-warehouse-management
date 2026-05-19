@@ -19,11 +19,11 @@ const Input = React.forwardRef<HTMLInputElement, IInputProps>(
         const hasDescription = Boolean(error || helperText)
 
         return (
-            <div className={cn('flex w-full flex-col gap-1.5', wrapperClassName)}>
+            <div className={cn('flex w-full flex-col gap-2', wrapperClassName)}>
                 {label ? (
                     <label
                         htmlFor={inputId}
-                        className="text-sm font-semibold text-slate-700 dark:text-slate-200"
+                        className="text-base font-bold text-slate-700 dark:text-slate-200"
                     >
                         {label}
                     </label>
@@ -36,7 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, IInputProps>(
                     aria-invalid={Boolean(error)}
                     aria-describedby={hasDescription ? descriptionId : undefined}
                     className={cn(
-                        'flex h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-blue-900',
+                        'flex h-13 min-h-13 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base font-semibold text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-blue-900',
                         error &&
                             'border-red-500 focus:border-red-500 focus:ring-red-200 dark:focus:ring-red-900',
                         className,
@@ -48,8 +48,10 @@ const Input = React.forwardRef<HTMLInputElement, IInputProps>(
                     <p
                         id={descriptionId}
                         className={cn(
-                            'text-xs leading-5',
-                            error ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400',
+                            'text-sm font-semibold leading-6',
+                            error
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-slate-500 dark:text-slate-400',
                         )}
                     >
                         {error || helperText}

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Button, ErrorMessage, Spinner } from '@/components/ui'
+import { Button, Spinner } from '@/components/ui'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     selectIsFetchingPackingList,
@@ -102,8 +102,6 @@ export function PackingRecordList() {
                     {totalRows} đơn/ kiện
                 </span>
             </div>
-
-            <ErrorMessage message={error} />
 
             {isFetching ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">

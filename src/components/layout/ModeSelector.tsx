@@ -1,7 +1,6 @@
 import { cn } from '@/components/ui/utils'
 import type { WorkMode } from '@/models/common'
 
-
 //#region types
 type SelectableWorkMode = Exclude<WorkMode, 'NONE'>
 
@@ -50,7 +49,7 @@ const activeClassByMode: Record<SelectableWorkMode, string> = {
 //#region component
 export function ModeSelector({ value, onChange }: IModeSelectorProps) {
     return (
-        <div className="space-y-1">
+        <div className="space-y-2">
             {modeOptions.map((option) => {
                 const isActive = value === option.mode
 
@@ -60,20 +59,24 @@ export function ModeSelector({ value, onChange }: IModeSelectorProps) {
                         type="button"
                         onClick={() => onChange(option.mode)}
                         className={cn(
-                            'flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2.5 text-left transition-colors hover:bg-slate-50',
+                            'flex min-h-16 w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 text-left transition-colors hover:bg-slate-50',
                             isActive
                                 ? activeClassByMode[option.mode]
                                 : 'text-slate-600 hover:text-slate-900',
                         )}
                     >
-                        <span className="flex w-6 justify-center text-lg">{option.icon}</span>
+                        <span className="flex w-8 shrink-0 justify-center text-2xl">
+                            {option.icon}
+                        </span>
 
                         <span className="min-w-0">
-                            <span className="block text-sm font-semibold">{option.title}</span>
+                            <span className="block text-base font-black leading-6">
+                                {option.title}
+                            </span>
                             <span
                                 className={cn(
-                                    'block text-xs',
-                                    isActive ? 'text-current/70' : 'text-slate-400',
+                                    'block text-sm font-semibold leading-5',
+                                    isActive ? 'text-current/80' : 'text-slate-500',
                                 )}
                             >
                                 {option.description}

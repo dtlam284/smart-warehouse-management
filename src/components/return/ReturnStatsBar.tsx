@@ -7,14 +7,12 @@ import {
 import {
     selectIsLoadingReturnStats,
     selectReturnProviderStats,
-    selectTotalReturnCount,
 } from '@/store/selectors/returnSelectors'
 import type { IReturnProviderStats } from '@/models/return/ReturnInterface'
 
 //#region component
 export function ReturnStatsBar() {
     const stats = useAppSelector(selectReturnProviderStats)
-    const totalReturnCount = useAppSelector(selectTotalReturnCount)
     const isLoadingStats = useAppSelector(selectIsLoadingReturnStats)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 

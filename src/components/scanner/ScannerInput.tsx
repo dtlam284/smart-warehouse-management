@@ -9,6 +9,7 @@ export interface IScannerInputProps {
     disabled?: boolean
     autoFocus?: boolean
     removeMode?: boolean
+    focusSignal?: number
 }
 //#endregion types
 
@@ -19,20 +20,22 @@ export function ScannerInput({
     disabled = false,
     autoFocus = false,
     removeMode = false,
+    focusSignal = 0,
 }: IScannerInputProps) {
     const inputRef = React.useRef<HTMLInputElement>(null)
     const [value, setValue] = React.useState('')
 
     React.useEffect(() => {
-        if (autoFocus) {
+        if (!disabled && autoFocus) {
             inputRef.current?.focus()
         }
-    }, [autoFocus])
+    }, [autoFocus, disabled, focusSignal, placeholder, removeMode])
 
     const submitScan = () => {
         const trimmedValue = value.trim()
 
         if (!trimmedValue) {
+            inputRef.current?.focus()
             return
         }
 
@@ -48,6 +51,7 @@ export function ScannerInput({
         }
     }
 
+    //#region render
     return (
         <div className="relative">
             <input
@@ -79,5 +83,6 @@ export function ScannerInput({
             </button>
         </div>
     )
+    //#endregion render
 }
 //#endregion component

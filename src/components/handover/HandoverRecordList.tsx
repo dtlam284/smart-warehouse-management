@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Button, ErrorMessage, Spinner } from '@/components/ui'
+import { Button, Spinner } from '@/components/ui'
 import { cn } from '@/components/ui/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -65,7 +65,7 @@ export function HandoverRecordList() {
 
         const timeoutId = window.setTimeout(() => {
             dispatch(clearHandoverError())
-        }, 3500)
+        }, 7000)
 
         return () => window.clearTimeout(timeoutId)
     }, [dispatch, error])
@@ -114,8 +114,6 @@ export function HandoverRecordList() {
             {/* <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 💡 Quét mã mới sẽ thêm record lên đầu danh sách. Quét mã đã có sẽ được dedup rồi đưa record mới lên đầu.
             </div> */}
-
-            <ErrorMessage message={error} />
 
             {isBusy ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">

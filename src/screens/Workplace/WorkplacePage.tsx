@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { Truck } from 'lucide-react'
 import {
     HandoverFilterBar,
     HandoverRecordList,
@@ -42,6 +41,9 @@ import { fetchHandoverList, loadHandoverStats } from '@/store/slices/handoverSli
 import { fetchPackingList, loadPackingStats } from '@/store/slices/packingSlice'
 import { fetchReturnList, loadReturnStats, setReturnFilters } from '@/store/slices/returnSlice'
 import { loadShippingProviders } from '@/store/slices/warehouseSlice'
+import { selectPackingError } from '@/store/selectors/packingSelectors'
+import { selectHandoverError } from '@/store/selectors/handoverSelectors'
+import { selectReturnError } from '@/store/selectors/returnSelectors'
 import type { IShippingProvider } from '@/models/warehouse/WarehouseInterface'
 import type { ScanInputType, WorkMode } from '@/models/common/CommonInterface'
 
@@ -55,8 +57,8 @@ function getScannerPlaceholder(
         return 'Quét mã cần xóa...'
     }
 
-    if (workMode === 'PACKING') {
-        return 'Quét mã hoặc SKU...'
+    if (workMode === 'NONE') {
+        return 'Chọn chế độ làm việc...'
     }
 
     const placeholderByType: Record<ScanInputType, string> = {
@@ -69,15 +71,47 @@ function getScannerPlaceholder(
     return placeholderByType[scanInputType]
 }
 
-function shouldRequireShippingProvider(workMode: WorkMode, scanInputType: ScanInputType): boolean {
-    return workMode !== 'NONE' && scanInputType !== 'DELIVERYCODE'
+function shouldRequireShippingProvider(scanInputType: ScanInputType): boolean {
+    return scanInputType === 'DELIVERYCODE'
+}
+
+function getDefaultShippingProvider(
+    providers: IShippingProvider[],
+): Pick<IShippingProvider, 'Id' | 'Name'> | null {
+    if (providers.length === 0) {
+        return null
+    }
+
+    return (
+        providers.find((provider) => provider.Name === 'J&T') ??
+        providers.find((provider) => provider.Name.toLowerCase().includes('j&t')) ??
+        providers[0]
+    )
+}
+
+function WorkflowErrorBanner({ message }: { message?: string | null }) {
+    if (!message) {
+        return null
+    }
+
+    return (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-base font-bold text-red-700 shadow-sm">
+            <div className="flex items-start gap-3">
+                <span className="text-xl leading-6">⚠️</span>
+                <span className="leading-6">{message}</span>
+            </div>
+        </div>
+    )
 }
 //#endregion helpers
 
 //#region content
 function PackingContent() {
+    const error = useAppSelector(selectPackingError)
+
     return (
         <div className="space-y-4">
+            <WorkflowErrorBanner message={error} />
             <PackingActivePanel />
             <PackingFilterBar />
             <PackingRecordList />
@@ -86,9 +120,12 @@ function PackingContent() {
 }
 
 function HandoverContent() {
+    const error = useAppSelector(selectHandoverError)
+
     return (
         <div className="space-y-4">
             <HandoverStatsBar />
+            <WorkflowErrorBanner message={error} />
             <HandoverFilterBar />
             <HandoverRecordList />
         </div>
@@ -96,9 +133,12 @@ function HandoverContent() {
 }
 
 function ReturnContent() {
+    const error = useAppSelector(selectReturnError)
+
     return (
         <div className="space-y-4">
             <ReturnStatsBar />
+            <WorkflowErrorBanner message={error} />
             <ReturnActivePanel />
             <ReturnFilterBar />
             <ReturnRecordList />
@@ -106,7 +146,29 @@ function ReturnContent() {
     )
 }
 
-function WorkplaceContent({ workMode }: { workMode: WorkMode }) {
+function BlockedWorkflowContent() {
+    return (
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <EmptyState
+                icon="🚚"
+                title="Chọn đơn vị vận chuyển"
+                description="Mã vận đơn cần chọn đơn vị vận chuyển trước khi quét hoặc tải dữ liệu."
+            />
+        </section>
+    )
+}
+
+function WorkplaceContent({
+    workMode,
+    isBlocked,
+}: {
+    workMode: WorkMode
+    isBlocked: boolean
+}) {
+    if (isBlocked) {
+        return <BlockedWorkflowContent />
+    }
+
     switch (workMode) {
         case 'PACKING':
             return <PackingContent />
@@ -142,31 +204,41 @@ export function WorkplacePage() {
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
     const { scanError, handleScan } = useScanProcessor()
+    const [focusSignal, setFocusSignal] = React.useState(0)
 
-    const shouldShowShippingProvider = shouldRequireShippingProvider(workMode, scanInputType)
-    const workflowShippingUnitId = shouldShowShippingProvider
-        ? selectedShippingProviderId || undefined
-        : undefined
+    const shouldShowShippingProvider = shouldRequireShippingProvider(scanInputType)
+    const isWorkflowBlocked = shouldShowShippingProvider && !selectedShippingProviderId
     const scannerPlaceholder = getScannerPlaceholder(workMode, scanInputType, isRemoveMode)
     const returnPageSize = returnFilters.PageSize
 
+    const focusScanner = () => {
+        setFocusSignal((current) => current + 1)
+    }
+
     const handleModeChange = (mode: Exclude<WorkMode, 'NONE'>) => {
         dispatch(setWorkMode(mode))
+        focusScanner()
     }
 
     const handleScanTypeChange = (type: ScanInputType) => {
         dispatch(setScanInputType(type))
+        focusScanner()
     }
 
     const handleShippingProviderChange = (provider: Pick<IShippingProvider, 'Id' | 'Name'>) => {
         dispatch(setShippingProvider(provider))
+        focusScanner()
+
+        if (!provider.Id) {
+            return
+        }
 
         if (workMode === 'HANDOVER') {
             void dispatch(
                 fetchHandoverList({
                     PageIndex: 1,
                     PageSize: 10,
-                    ShippingUnitId: provider.Id || undefined,
+                    ShippingUnitId: provider.Id,
                 }),
             )
 
@@ -176,15 +248,30 @@ export function WorkplacePage() {
 
         if (workMode === 'RETURN_DELIVERY') {
             const nextFilters = {
+                ...returnFilters,
                 PageIndex: 1,
-                PageSize: returnPageSize ?? 10,
-                ShippingUnitId: provider.Id || undefined,
+                ShippingUnitId: provider.Id,
             }
 
             dispatch(setReturnFilters(nextFilters))
             void dispatch(fetchReturnList(nextFilters))
             void dispatch(loadReturnStats({}))
         }
+
+        if (workMode === 'PACKING') {
+            void dispatch(
+                fetchPackingList({
+                    PageIndex: 1,
+                    PageSize: 10,
+                    ShippingUnitId: provider.Id,
+                }),
+            )
+        }
+    }
+
+    const handleToggleRemoveMode = () => {
+        dispatch(toggleRemoveMode())
+        focusScanner()
     }
 
     //#region effects
@@ -193,7 +280,21 @@ export function WorkplacePage() {
     }, [dispatch])
 
     React.useEffect(() => {
-        if (workMode !== 'PACKING') {
+        if (selectedShippingProviderId !== null) {
+            return
+        }
+
+        const defaultProvider = getDefaultShippingProvider(providers)
+
+        if (!defaultProvider) {
+            return
+        }
+
+        dispatch(setShippingProvider(defaultProvider))
+    }, [dispatch, providers, selectedShippingProviderId])
+
+    React.useEffect(() => {
+        if (workMode !== 'PACKING' || isWorkflowBlocked) {
             return
         }
 
@@ -201,14 +302,17 @@ export function WorkplacePage() {
             fetchPackingList({
                 PageIndex: 1,
                 PageSize: 10,
+                ShippingUnitId: shouldShowShippingProvider
+                    ? selectedShippingProviderId || undefined
+                    : undefined,
             }),
         )
 
         void dispatch(loadPackingStats({}))
-    }, [dispatch, workMode])
+    }, [dispatch, isWorkflowBlocked, selectedShippingProviderId, shouldShowShippingProvider, workMode])
 
     React.useEffect(() => {
-        if (workMode !== 'HANDOVER') {
+        if (workMode !== 'HANDOVER' || isWorkflowBlocked) {
             return
         }
 
@@ -218,115 +322,109 @@ export function WorkplacePage() {
             fetchHandoverList({
                 PageIndex: 1,
                 PageSize: 10,
-                ShippingUnitId: workflowShippingUnitId,
+                ShippingUnitId: shouldShowShippingProvider
+                    ? selectedShippingProviderId || undefined
+                    : undefined,
             }),
         )
-    }, [dispatch, workflowShippingUnitId, workMode])
+    }, [dispatch, isWorkflowBlocked, selectedShippingProviderId, shouldShowShippingProvider, workMode])
 
     React.useEffect(() => {
-        if (workMode !== 'RETURN_DELIVERY') {
+        if (workMode !== 'RETURN_DELIVERY' || isWorkflowBlocked) {
             return
         }
 
         const nextFilters = {
             PageIndex: 1,
             PageSize: returnPageSize ?? 10,
-            ShippingUnitId: workflowShippingUnitId,
+            ShippingUnitId: shouldShowShippingProvider
+                ? selectedShippingProviderId || undefined
+                : undefined,
         }
 
         dispatch(setReturnFilters(nextFilters))
         void dispatch(loadReturnStats({}))
         void dispatch(fetchReturnList(nextFilters))
-    }, [dispatch, returnPageSize, workflowShippingUnitId, workMode])
+    }, [
+        dispatch,
+        isWorkflowBlocked,
+        returnPageSize,
+        selectedShippingProviderId,
+        shouldShowShippingProvider,
+        workMode,
+    ])
     //#endregion effects
 
     //#region render
     return (
-        <div className="flex h-full min-h-0 flex-col bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-            <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr] overflow-hidden">
-                <aside className="min-h-0 overflow-y-auto border-r border-slate-200 bg-white">
+        <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr] overflow-hidden bg-slate-100 text-slate-900">
+            <aside className="min-h-0 overflow-y-auto border-r border-slate-200 bg-white">
+                <section className="border-b border-slate-200 p-4">
+                    <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Chế độ làm việc
+                    </div>
+                    <ModeSelector value={workMode} onChange={handleModeChange} />
+                </section>
+
+                <section className="border-b border-slate-200 p-4">
+                    <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Loại mã quét
+                    </div>
+                    <ScanTypeSelector value={scanInputType} onChange={handleScanTypeChange} />
+                </section>
+
+                {shouldShowShippingProvider ? (
                     <section className="border-b border-slate-200 p-4">
                         <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Chế độ làm việc
+                            Đơn vị vận chuyển
                         </div>
-                        <ModeSelector value={workMode} onChange={handleModeChange} />
-                    </section>
-
-                    <section className="border-b border-slate-200 p-4">
-                        <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Loại mã quét
-                        </div>
-                        <ScanTypeSelector value={scanInputType} onChange={handleScanTypeChange} />
-                    </section>
-
-                    {shouldShowShippingProvider ? (
-                        <section className="border-b border-slate-200 p-4">
-                            <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                                Đơn vị vận chuyển
-                            </div>
-                            <ShippingProviderSelect
-                                providers={providers}
-                                value={selectedShippingProviderId}
-                                onChange={handleShippingProviderChange}
-                            />
-                        </section>
-                    ) : null}
-
-                    <section className="border-b border-slate-200 p-4">
-                        <div className="mb-3 flex items-center justify-between">
-                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                Nhập / quét mã
-                            </span>
-
-                            {isRemoveMode ? <Badge variant="error">XÓA</Badge> : null}
-                        </div>
-
-                        <ScannerInput
-                            autoFocus
-                            removeMode={isRemoveMode}
-                            placeholder={scannerPlaceholder}
-                            onScan={handleScan}
+                        <ShippingProviderSelect
+                            providers={providers}
+                            value={selectedShippingProviderId}
+                            onChange={handleShippingProviderChange}
                         />
-
-                        <button
-                            type="button"
-                            onClick={() => dispatch(toggleRemoveMode())}
-                            className={
-                                isRemoveMode
-                                    ? 'mt-2 flex h-10 w-full items-center justify-center rounded-md border border-red-500 bg-red-50 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100'
-                                    : 'mt-2 flex h-10 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100'
-                            }
-                        >
-                            🗑 {isRemoveMode ? 'Tắt chế độ xóa' : 'Chế độ xóa'}
-                        </button>
-
-                        <div className="mt-3">
-                            <ErrorMessage message={scanError} />
-                        </div>
                     </section>
+                ) : null}
 
-                    <section className="p-4">
-                        <div className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            Gợi ý thao tác
-                        </div>
+                <section className="border-b border-slate-200 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Nhập / quét mã
+                        </span>
 
-                        <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                            <div className="flex items-center gap-2 font-semibold text-slate-600">
-                                <Truck className="h-4 w-4" />
-                                Scanner workflow
-                            </div>
-                            <p className="mt-2">
-                                Nhấn Enter sau khi quét. Packing sẽ quét kiện trước, sau đó quét SKU.
-                                Mã vận đơn tự xác định đơn vị vận chuyển. Các mã còn lại cần chọn đơn vị vận chuyển trước khi quét.
-                            </p>
-                        </div>
-                    </section>
-                </aside>
+                        {isRemoveMode ? <Badge variant="error">XÓA</Badge> : null}
+                    </div>
 
-                <main className="min-h-0 overflow-y-auto p-5">
-                    <WorkplaceContent workMode={workMode} />
-                </main>
-            </div>
+                    <ScannerInput
+                        autoFocus
+                        focusSignal={focusSignal}
+                        removeMode={isRemoveMode}
+                        disabled={isWorkflowBlocked}
+                        placeholder={scannerPlaceholder}
+                        onScan={handleScan}
+                    />
+
+                    <button
+                        type="button"
+                        onClick={handleToggleRemoveMode}
+                        className={
+                            isRemoveMode
+                                ? 'mt-2 flex h-10 w-full items-center justify-center rounded-md border border-red-500 bg-red-50 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100'
+                                : 'mt-2 flex h-10 w-full items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100'
+                        }
+                    >
+                        🗑 {isRemoveMode ? 'Tắt chế độ xóa' : 'Chế độ xóa'}
+                    </button>
+
+                    <div className="mt-3">
+                        <ErrorMessage message={scanError} />
+                    </div>
+                </section>
+            </aside>
+
+            <main className="min-h-0 overflow-y-auto p-5">
+                <WorkplaceContent workMode={workMode} isBlocked={isWorkflowBlocked} />
+            </main>
 
             <NotificationViewport />
         </div>

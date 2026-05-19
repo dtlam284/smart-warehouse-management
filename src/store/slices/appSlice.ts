@@ -25,7 +25,7 @@ const initialState: IAppState = {
     initialized: false,
     pageTitle: '',
     isSidebarCollapsed: false,
-    workMode: 'NONE',
+    workMode: 'PACKING',
     scanInputType: 'DELIVERYCODE',
     selectedShippingProviderId: null,
     selectedShippingProviderName: null,
@@ -65,8 +65,8 @@ const appSlice = createSlice({
         },
 
         clearShippingProvider(state) {
-            state.selectedShippingProviderId = null
-            state.selectedShippingProviderName = null
+            state.selectedShippingProviderId = ''
+            state.selectedShippingProviderName = ''
         },
 
         setRemoveMode(state, action: PayloadAction<boolean>) {
@@ -80,6 +80,7 @@ const appSlice = createSlice({
 })
 //#endregion slices
 
+//#region exports
 export const {
     setInitialized,
     setPageTitle,
@@ -92,6 +93,5 @@ export const {
     toggleRemoveMode,
 } = appSlice.actions
 
-//#region reducers
 export default appSlice.reducer
-//#endregion reducers
+//#endregion exports

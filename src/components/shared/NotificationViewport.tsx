@@ -1,26 +1,71 @@
 import * as React from 'react'
+import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react'
 import { cn } from '@/components/ui/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { selectNotifications } from '@/store/selectors/notificationSelectors'
 import { dismissNotification } from '@/store/slices/notificationSlice'
 
+//#region constants
+const NOTIFICATION_DURATION_MS = 7000
+//#endregion constants
+
 //#region helpers
 function getNotificationClass(type: string): string {
     switch (type) {
         case 'success':
-            return 'bg-green-600 text-white'
+            return 'border-green-200 bg-green-50 text-green-800'
 
         case 'error':
-            return 'bg-red-600 text-white'
+            return 'border-red-200 bg-red-50 text-red-800'
 
         case 'warning':
-            return 'bg-amber-500 text-white'
+            return 'border-amber-200 bg-amber-50 text-amber-800'
 
         case 'info':
-            return 'bg-blue-600 text-white'
+            return 'border-blue-200 bg-blue-50 text-blue-800'
 
         default:
-            return 'bg-slate-800 text-white'
+            return 'border-slate-200 bg-white text-slate-800'
+    }
+}
+
+function getIconClass(type: string): string {
+    switch (type) {
+        case 'success':
+            return 'text-green-600'
+
+        case 'error':
+            return 'text-red-600'
+
+        case 'warning':
+            return 'text-amber-600'
+
+        case 'info':
+            return 'text-blue-600'
+
+        default:
+            return 'text-slate-600'
+    }
+}
+
+function NotificationIcon({ type }: { type: string }) {
+    const className = cn('mt-0.5 h-6 w-6 shrink-0', getIconClass(type))
+
+    switch (type) {
+        case 'success':
+            return <CheckCircle2 className={className} />
+
+        case 'error':
+            return <XCircle className={className} />
+
+        case 'warning':
+            return <AlertTriangle className={className} />
+
+        case 'info':
+            return <Info className={className} />
+
+        default:
+            return <Info className={className} />
     }
 }
 //#endregion helpers
@@ -40,7 +85,7 @@ function NotificationItem({
     React.useEffect(() => {
         const timeoutId = window.setTimeout(() => {
             dispatch(dismissNotification(id))
-        }, 3500)
+        }, NOTIFICATION_DURATION_MS)
 
         return () => window.clearTimeout(timeoutId)
     }, [dispatch, id])
@@ -50,11 +95,12 @@ function NotificationItem({
             type="button"
             onClick={() => dispatch(dismissNotification(id))}
             className={cn(
-                'min-w-[280px] max-w-[520px] rounded-full px-5 py-3 text-sm font-bold shadow-lg transition hover:opacity-90',
+                'flex w-full items-start gap-3 rounded-xl border px-5 py-4 text-left text-base font-bold shadow-xl transition hover:opacity-90',
                 getNotificationClass(type),
             )}
         >
-            {message}
+            <NotificationIcon type={type} />
+            <span className="leading-6">{message}</span>
         </button>
     )
 }
@@ -69,7 +115,7 @@ export function NotificationViewport() {
     }
 
     return (
-        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
+        <div className="pointer-events-none fixed left-1/2 top-24 z-50 flex w-[min(760px,calc(100vw-32px))] -translate-x-1/2 flex-col items-stretch gap-3">
             {notifications.map((notification) => (
                 <div key={notification.id} className="pointer-events-auto">
                     <NotificationItem

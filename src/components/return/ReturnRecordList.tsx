@@ -1,11 +1,10 @@
-import { Badge, Button, ErrorMessage, Spinner } from '@/components/ui'
+import { Badge, Button, Spinner } from '@/components/ui'
 import { cn } from '@/components/ui/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     selectIsConfirmingReturn,
     selectIsFetchingReturnList,
     selectIsRemovingReturn,
-    selectReturnError,
     selectReturnFilters,
     selectReturnRecords,
     selectReturnTotalRows,
@@ -76,7 +75,6 @@ export function ReturnRecordList() {
     const isFetching = useAppSelector(selectIsFetchingReturnList)
     const isConfirming = useAppSelector(selectIsConfirmingReturn)
     const isRemoving = useAppSelector(selectIsRemovingReturn)
-    const error = useAppSelector(selectReturnError)
 
     const pageIndex = Math.max(1, filters.PageIndex)
     const pageSize = filters.PageSize
@@ -109,8 +107,6 @@ export function ReturnRecordList() {
                     {totalRows} đơn / kiện
                 </span>
             </div>
-
-            <ErrorMessage message={error} />
 
             {isBusy ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">
