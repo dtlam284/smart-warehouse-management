@@ -33,7 +33,12 @@ function isAllItemsHandled(
 }
 
 function getRecordKey(record: IPackingRecord): string {
-    return record.Id || record.DeliveryCode || record.PackageCode || record.OrderCode
+    return [
+        record.DeliveryCode,
+        record.PackageCode,
+        record.OrderCode,
+        record.Id,
+    ].find((value): value is string => Boolean(value?.trim())) ?? ''
 }
 
 function getRecordKeys(records: IPackingRecord[]): string[] {
