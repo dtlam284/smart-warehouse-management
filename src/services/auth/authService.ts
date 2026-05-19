@@ -64,6 +64,7 @@ interface IAuthResetPasswordApiRequest {
 
 //#region constants
 const DEFAULT_AUTH_LOGIN_FUNCTION = ''
+const DEFAULT_AUTH_LOGIN_DOMAIN = 'sagacom.io'
 const DEFAULT_TYPE_VERIFICATION = 'Email'
 //#endregion constants
 
@@ -101,6 +102,20 @@ const getFirstNonEmptyString = (...values: Array<string | undefined>): string =>
 const getEnvString = (value: string | undefined): string => {
     return value?.trim() ?? ''
 }
+
+const normalizeOrganizationCode = (value: string): string => {
+    return value.trim().toUpperCase()
+}
+
+const buildTenantHostFromCode = (organizationCode: string): string => {
+    const normalizedCode = organizationCode.trim().toLowerCase()
+
+    if (!normalizedCode) {
+        return ''
+    }
+
+    return `${normalizedCode}.${DEFAULT_AUTH_LOGIN_DOMAIN}`
+}
 //#endregion browser helpers
 
 //#region env helpers
@@ -119,9 +134,24 @@ const getAuthLoginFunction = (): string => {
 
 //#region request mappers
 const toLoginApiRequest = (payload: IAuthLoginRequest): IAuthLoginApiRequest => {
+    const payloadCode = getEnvString(payload.code)
+    const envCode = getAuthLoginCode()
+    const loginCode = normalizeOrganizationCode(getFirstNonEmptyString(payloadCode, envCode))
+
+    const payloadHost = getEnvString(payload.host)
+    const hostFromPayloadCode = payloadCode ? buildTenantHostFromCode(payloadCode) : ''
+    const hostFromEnvCode = envCode ? buildTenantHostFromCode(envCode) : ''
+    const loginHost = getFirstNonEmptyString(
+        payloadHost,
+        hostFromPayloadCode,
+        getAuthLoginHost(),
+        hostFromEnvCode,
+        getBrowserHost(),
+    ).toLowerCase()
+
     return {
-        Host: getFirstNonEmptyString(payload.host, getAuthLoginHost(), getBrowserHost()),
-        Code: getFirstNonEmptyString(payload.code, getAuthLoginCode()),
+        Host: loginHost,
+        Code: loginCode,
         Function: getFirstNonEmptyString(
             payload.functionPath,
             getAuthLoginFunction(),

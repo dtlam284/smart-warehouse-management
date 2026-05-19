@@ -14,8 +14,23 @@ import { isActivationRequiredMessage } from './utils'
 interface ILoginFormValues {
     username: string
     password: string
+    organizationCode: string
 }
 //#endregion interfaces
+
+//#region helpers
+const getDefaultOrganizationCode = (): string => {
+    return import.meta.env.VITE_AUTH_LOGIN_CODE?.trim() ?? ''
+}
+
+const normalizeOrganizationCode = (value: string): string => {
+    return value.trim().toUpperCase()
+}
+
+const toOrganizationHost = (organizationCode: string): string => {
+    return `${organizationCode.trim().toLowerCase()}.sagacom.io`
+}
+//#endregion helpers
 
 //#region login screen
 export function LoginScreen() {
@@ -37,6 +52,7 @@ export function LoginScreen() {
         defaultValues: {
             username: '',
             password: '',
+            organizationCode: getDefaultOrganizationCode(),
         },
     })
     //#endregion hooks
@@ -59,10 +75,14 @@ export function LoginScreen() {
     }
 
     const onSubmit = async (values: ILoginFormValues) => {
+        const organizationCode = normalizeOrganizationCode(values.organizationCode)
+
         const result = await dispatch(
             loginThunk({
                 username: values.username.trim(),
                 password: values.password,
+                code: organizationCode,
+                host: toOrganizationHost(organizationCode),
             }),
         )
 
@@ -100,7 +120,7 @@ export function LoginScreen() {
                     </div>
 
                     <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
-                        Sign In
+                        Đăng nhập
                     </h1>
                 </div>
                 {/*#endregion header */}
@@ -125,14 +145,14 @@ export function LoginScreen() {
                                     )
                                 }
                             >
-                                Go to activation
+                                Kích hoạt tài khoản
                             </Button>
                         ) : null}
                     </div>
                 ) : null}
                 {/*#endregion redux error */}
 
-                {/*#region register form */}
+                {/*#region login form */}
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                     {/*#region username field */}
                     <div className="space-y-1.5">
@@ -140,14 +160,14 @@ export function LoginScreen() {
                             htmlFor="username"
                             className="text-sm font-medium text-slate-700 dark:text-slate-200"
                         >
-                            Username
+                            Email
                         </label>
 
                         <Input
                             id="username"
                             type="text"
                             autoComplete="username"
-                            placeholder="Email or phone number"
+                            // placeholder="Email or phone number"
                             disabled={isBusy}
                             aria-invalid={Boolean(errors.username)}
                             {...register('username', {
@@ -170,14 +190,14 @@ export function LoginScreen() {
                             htmlFor="password"
                             className="text-sm font-medium text-slate-700 dark:text-slate-200"
                         >
-                            Password
+                            Mật khẩu
                         </label>
 
                         <Input
                             id="password"
                             type="password"
                             autoComplete="current-password"
-                            placeholder="Enter your password"
+                            // placeholder="Enter your password"
                             disabled={isBusy}
                             aria-invalid={Boolean(errors.password)}
                             {...register('password', {
@@ -194,30 +214,64 @@ export function LoginScreen() {
                     </div>
                     {/*#endregion password field */}
 
+                    {/*#region organization code field */}
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="organizationCode"
+                            className="text-sm font-medium text-slate-700 dark:text-slate-200"
+                        >
+                            Mã tổ chức
+                        </label>
+
+                        <Input
+                            id="organizationCode"
+                            type="text"
+                            autoComplete="organization"
+                            // placeholder="Ví dụ: 00VH9"
+                            disabled={isBusy}
+                            aria-invalid={Boolean(errors.organizationCode)}
+                            {...register('organizationCode', {
+                                required: 'Mã tổ chức là bắt buộc',
+                                validate: (value) =>
+                                    value.trim().length > 0 || 'Mã tổ chức là bắt buộc',
+                                setValueAs: (value) =>
+                                    typeof value === 'string' ? value.trim().toUpperCase() : value,
+                                onChange: clearErrorIfNeeded,
+                            })}
+                        />
+
+                        {errors.organizationCode?.message ? (
+                            <p className="text-xs text-red-600 dark:text-red-400">
+                                {errors.organizationCode.message}
+                            </p>
+                        ) : null}
+                    </div>
+                    {/*#endregion organization code field */}
+
                     {/*#region forgot password field */}
                     <div className="flex items-center justify-end">
                         <Link
                             to={appendRedirectParam('/auth/forgot-password', location.search)}
                             className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                         >
-                            Forgot password?
+                            Quên mật khẩu?
                         </Link>
                     </div>
                     {/*#endregion forgot password field */}
 
                     <Button type="submit" disabled={isBusy} className="w-full">
-                        {isBusy ? 'Signing in...' : 'Sign in'}
+                        {isBusy ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </Button>
                 </form>
 
                 {/*#region don't have an account field */}
                 <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-                    Don&apos;t have an account?{' '}
+                    Chưa có tài khoản?{' '}
                     <Link
                         to={appendRedirectParam('/auth/register', location.search)}
                         className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                        Create one
+                        Tạo tài khoản
                     </Link>
                 </p>
                 {/*#endregion don't have an account field */}
@@ -225,3 +279,4 @@ export function LoginScreen() {
         </div>
     )
 }
+//#endregion login screen

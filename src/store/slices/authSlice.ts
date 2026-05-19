@@ -177,16 +177,20 @@ const getEnvString = (value: string | undefined): string => {
     return value?.trim() ?? ''
 }
 
-const getTargetTenantCode = (): string => {
+const getEnvTenantCode = (): string => {
     return getEnvString(import.meta.env.VITE_AUTH_LOGIN_CODE)
 }
 
-const getTargetTenantHost = (): string => {
-    return getEnvString(import.meta.env.VITE_AUTH_LOGIN_HOST)
+const normalizeOrganizationCode = (value: string): string => {
+    return value.trim().toUpperCase()
 }
 
-const shouldUseTargetedTenantLogin = (): boolean => {
-    return getTargetTenantCode().length > 0 && getTargetTenantHost().length > 0
+const getRequestedTenantCode = (payload: IAuthLoginRequest): string => {
+    return normalizeOrganizationCode(getEnvString(payload.code) || getEnvTenantCode())
+}
+
+const shouldUseTargetedTenantLogin = (payload: IAuthLoginRequest): boolean => {
+    return getRequestedTenantCode(payload).length > 0
 }
 
 const normalizeComparableCode = (value: unknown): string => {
@@ -196,18 +200,18 @@ const normalizeComparableCode = (value: unknown): string => {
 const getTenantCode = (tenant: ITenantItem): string => {
     const tenantRecord = tenant as unknown as Record<string, unknown>
 
-    return (
-        normalizeComparableCode(tenantRecord.code) ||
-        normalizeComparableCode(tenantRecord.Code)
-    )
+    return normalizeComparableCode(tenantRecord.code) || normalizeComparableCode(tenantRecord.Code)
 }
 
 const toTenantItems = (payload: ITenantListResponse | ITenantItem[]): ITenantItem[] => {
     return Array.isArray(payload) ? payload : (payload.items ?? [])
 }
 
-const findTargetTenant = (tenants: ITenantItem[]): ITenantItem | undefined => {
-    const targetCode = normalizeComparableCode(getTargetTenantCode())
+const findTargetTenant = (
+    tenants: ITenantItem[],
+    requestedTenantCode: string,
+): ITenantItem | undefined => {
+    const targetCode = normalizeComparableCode(requestedTenantCode)
 
     return tenants.find((tenant) => getTenantCode(tenant) === targetCode)
 }
@@ -218,21 +222,25 @@ export const loginThunk = createAppAsyncThunk<ILoginThunkPayload, IAuthLoginRequ
     'auth/login',
     async (payload, { rejectWithValue }) => {
         try {
-            const loginResponse = await authService.login(payload)
+            const requestedTenantCode = getRequestedTenantCode(payload)
+            const loginResponse = await authService.login({
+                ...payload,
+                code: requestedTenantCode,
+            })
 
-            if (!shouldUseTargetedTenantLogin()) {
+            if (!shouldUseTargetedTenantLogin(payload)) {
                 return loginResponse
             }
 
             const tenantListResponse = await tenantService.listTenants()
             const tenants = toTenantItems(tenantListResponse)
-            const targetTenant = findTargetTenant(tenants)
+            const targetTenant = findTargetTenant(tenants, requestedTenantCode)
 
             if (!targetTenant) {
                 clearStoredAuthTokens()
 
                 return rejectWithValue(
-                    `Tenant ${getTargetTenantCode()} was not found for this account`,
+                    `Tenant ${requestedTenantCode} was not found for this account`,
                 )
             }
 
@@ -240,7 +248,7 @@ export const loginThunk = createAppAsyncThunk<ILoginThunkPayload, IAuthLoginRequ
                 clearStoredAuthTokens()
 
                 return rejectWithValue(
-                    `Tenant ${getTargetTenantCode()} is missing ClientId or ClientSecret`,
+                    `Tenant ${requestedTenantCode} is missing ClientId or ClientSecret`,
                 )
             }
 
