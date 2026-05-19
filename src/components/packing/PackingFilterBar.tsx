@@ -21,7 +21,8 @@ export function PackingFilterBar() {
     const buildFilters = (): IPackingFilters => ({
         ...filters,
         PageIndex: 1,
-        Date: date.trim() || undefined,
+        PageSize: filters.PageSize,
+        Date: date || undefined,
         DeliveryCode: deliveryCode.trim() || undefined,
         ShippingUnitId: shippingUnitId || undefined,
     })

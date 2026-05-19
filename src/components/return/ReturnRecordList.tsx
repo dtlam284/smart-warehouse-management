@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { Badge, Button, ErrorMessage, Spinner } from '@/components/ui'
 import { cn } from '@/components/ui/utils'
 import { useAppDispatch, useAppSelector } from '@/store'
@@ -11,19 +10,12 @@ import {
     selectReturnRecords,
     selectReturnTotalRows,
 } from '@/store/selectors/returnSelectors'
-import {
-    clearReturnError,
-    fetchReturnList,
-    setReturnFilters,
-} from '@/store/slices/returnSlice'
-import type { 
-    IReturnFilters, 
-    ReturnType 
-} from '@/models/return/ReturnInterface'
+import { fetchReturnList, setReturnFilters } from '@/store/slices/returnSlice'
+import type { IReturnFilters, ReturnType } from '@/models/return/ReturnInterface'
 
 //#region helpers
 function formatDateTime(value: string): string {
-    if (!value) {
+    if (!value || value.startsWith('0001-01-01')) {
         return '-'
     }
 
@@ -65,6 +57,13 @@ function getReturnTypeVariant(type: ReturnType): 'success' | 'warning' | 'error'
             return 'warning'
     }
 }
+
+function getRecordKey(
+    record: { Id?: string; DeliveryCode?: string | null; OrderCode?: string },
+    index: number,
+) {
+    return record.Id || record.DeliveryCode || record.OrderCode || `return-record-${index}`
+}
 //#endregion helpers
 
 //#region component
@@ -79,60 +78,32 @@ export function ReturnRecordList() {
     const isRemoving = useAppSelector(selectIsRemovingReturn)
     const error = useAppSelector(selectReturnError)
 
-    const currentPage = filters.PageIndex ?? 1
-    const pageSize = filters.PageSize ?? 10
+    const pageIndex = Math.max(1, filters.PageIndex)
+    const pageSize = filters.PageSize
     const totalPages = getTotalPages(totalRows, pageSize)
     const isBusy = isFetching || isConfirming || isRemoving
 
-    const isFirstPage = currentPage <= 1
-    const isLastPage = currentPage >= totalPages
-
-    React.useEffect(() => {
-        if (!error) {
-            return
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            dispatch(clearReturnError())
-        }, 3500)
-
-        return () => window.clearTimeout(timeoutId)
-    }, [dispatch, error])
-
     const handlePageChange = (nextPageIndex: number) => {
+        const safePageIndex = Math.min(Math.max(1, nextPageIndex), totalPages)
+
         const nextFilters: IReturnFilters = {
             ...filters,
-            PageIndex: nextPageIndex,
-            PageSize: pageSize,
+            PageIndex: safePageIndex,
         }
 
         dispatch(setReturnFilters(nextFilters))
         void dispatch(fetchReturnList(nextFilters))
     }
 
-    const handlePreviousPage = () => {
-        if (isFirstPage) {
-            return
-        }
-
-        handlePageChange(Math.max(1, currentPage - 1))
-    }
-
-    const handleNextPage = () => {
-        if (isLastPage) {
-            return
-        }
-
-        handlePageChange(currentPage + 1)
-    }
-
     //#region render
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Đơn hoàn đã xác nhận hôm nay
-                </h2>
+                <div>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Đơn hoàn đã xác nhận hôm nay
+                    </h2>
+                </div>
 
                 <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
                     {totalRows} đơn
@@ -175,27 +146,27 @@ export function ReturnRecordList() {
 
                         <tbody className="divide-y divide-slate-200">
                             {records.map((record, index) => {
-                                const isFirstRowOnFirstPage = currentPage === 1 && index === 0
+                                const isFirstRowOnFirstPage = pageIndex === 1 && index === 0
 
                                 return (
                                     <tr
-                                        key={record.Id || record.DeliveryCode}
+                                        key={getRecordKey(record, index)}
                                         className={cn(
                                             'bg-white transition-colors',
                                             isFirstRowOnFirstPage && 'animate-pulse bg-purple-50',
                                         )}
                                     >
                                         <td className="px-3 py-2 text-slate-500">
-                                            {(currentPage - 1) * pageSize + index + 1}
+                                            {(pageIndex - 1) * pageSize + index + 1}
                                         </td>
 
                                         <td className="px-3 py-2 text-slate-600">
-                                            {record.OrderCode}
+                                            {record.OrderCode || '-'}
                                         </td>
 
                                         <td className="px-3 py-2">
                                             <span className="font-mono text-xs font-semibold text-purple-700">
-                                                {record.DeliveryCode}
+                                                {record.DeliveryCode || '-'}
                                             </span>
                                         </td>
 
@@ -206,7 +177,7 @@ export function ReturnRecordList() {
                                         </td>
 
                                         <td className="px-3 py-2 text-slate-600">
-                                            {record.ReturnByName}
+                                            {record.ReturnByName || '-'}
                                         </td>
 
                                         <td className="px-3 py-2 text-slate-500">
@@ -228,15 +199,15 @@ export function ReturnRecordList() {
 
             <div className="mt-4 flex items-center justify-between">
                 <p className="text-xs text-slate-500">
-                    Trang {currentPage} / {totalPages}
+                    Trang {pageIndex} / {totalPages}
                 </p>
 
                 <div className="flex gap-2">
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={isFirstPage || isBusy}
-                        onClick={handlePreviousPage}
+                        disabled={pageIndex <= 1 || isBusy}
+                        onClick={() => handlePageChange(pageIndex - 1)}
                     >
                         Trước
                     </Button>
@@ -244,8 +215,8 @@ export function ReturnRecordList() {
                     <Button
                         variant="secondary"
                         size="sm"
-                        disabled={isLastPage || isBusy}
-                        onClick={handleNextPage}
+                        disabled={pageIndex >= totalPages || isBusy}
+                        onClick={() => handlePageChange(pageIndex + 1)}
                     >
                         Sau
                     </Button>

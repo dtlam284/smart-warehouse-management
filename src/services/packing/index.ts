@@ -1,1 +1,1 @@
-import { packingService } from './packingService'
+export { packingService } from './packingService'

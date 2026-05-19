@@ -114,6 +114,46 @@ function getScanCodeFromRequest(request: IGetPackageDetailsRequest): string {
     )
 }
 
+function toLocalDateKey(value?: string): string | null {
+    if (!value) {
+        return null
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return null
+    }
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function normalizeFilterDate(value?: string): string | null {
+    if (!value) {
+        return null
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value
+    }
+
+    return toLocalDateKey(value)
+}
+
+function filterPackingRecordsByDate(records: IPackingRecord[], date?: string): IPackingRecord[] {
+    const filterDate = normalizeFilterDate(date)
+
+    if (!filterDate) {
+        return records
+    }
+
+    return records.filter((record) => toLocalDateKey(record.PackingDate) === filterDate)
+}
+
 function normalizePackingProduct(item: IBackendPackingProduct): IPackingProduct {
     return {
         GroupServiceName:
@@ -382,7 +422,14 @@ export const packingService = {
             query: { ...request },
         })
 
-        return normalizePackingListResponse(response, request)
+        const result = normalizePackingListResponse(response, request)
+        const filteredData = filterPackingRecordsByDate(result.Data, request.Date)
+
+        return {
+            ...result,
+            Data: filteredData,
+            TotalRows: request.Date ? filteredData.length : result.TotalRows,
+        }
     },
 
     async getPackingStats(request: IGetPackingStatsRequest = {}): Promise<IPackingStats> {
