@@ -18,13 +18,13 @@ export function ErrorMessage({ message, className, ...props }: IErrorMessageProp
         <div
             role="alert"
             className={cn(
-                'flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300',
+                'flex items-start gap-4 rounded-2xl border-2 border-red-300 bg-red-50 px-8 py-5 text-xl font-black text-red-700 shadow-sm dark:border-red-900 dark:bg-red-950 dark:text-red-300',
                 className,
             )}
             {...props}
         >
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{message}</span>
+            <AlertTriangle className="mt-0.5 h-8 w-8 shrink-0" />
+            <span className="leading-8">{message}</span>
         </div>
     )
 }

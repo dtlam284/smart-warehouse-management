@@ -20,7 +20,7 @@ import {
 import { ScannerInput } from '@/components/scanner/ScannerInput'
 import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
 import { NotificationViewport } from '@/components/shared/NotificationViewport'
-import { Badge, EmptyState, ErrorMessage } from '@/components/ui'
+import { Badge, EmptyState } from '@/components/ui'
 import { useScanProcessor } from '@/hooks/useScanProcessor'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -41,9 +41,6 @@ import { fetchHandoverList, loadHandoverStats } from '@/store/slices/handoverSli
 import { fetchPackingList, loadPackingStats } from '@/store/slices/packingSlice'
 import { fetchReturnList, loadReturnStats, setReturnFilters } from '@/store/slices/returnSlice'
 import { loadShippingProviders } from '@/store/slices/warehouseSlice'
-import { selectPackingError } from '@/store/selectors/packingSelectors'
-import { selectHandoverError } from '@/store/selectors/handoverSelectors'
-import { selectReturnError } from '@/store/selectors/returnSelectors'
 import type { IShippingProvider } from '@/models/warehouse/WarehouseInterface'
 import type { ScanInputType, WorkMode } from '@/models/common/CommonInterface'
 
@@ -88,30 +85,12 @@ function getDefaultShippingProvider(
         providers[0]
     )
 }
-
-function WorkflowErrorBanner({ message }: { message?: string | null }) {
-    if (!message) {
-        return null
-    }
-
-    return (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-base font-bold text-red-700 shadow-sm">
-            <div className="flex items-start gap-3">
-                <span className="text-xl leading-6">⚠️</span>
-                <span className="leading-6">{message}</span>
-            </div>
-        </div>
-    )
-}
 //#endregion helpers
 
 //#region content
 function PackingContent() {
-    const error = useAppSelector(selectPackingError)
-
     return (
         <div className="space-y-4">
-            <WorkflowErrorBanner message={error} />
             <PackingActivePanel />
             <PackingFilterBar />
             <PackingRecordList />
@@ -120,12 +99,9 @@ function PackingContent() {
 }
 
 function HandoverContent() {
-    const error = useAppSelector(selectHandoverError)
-
     return (
         <div className="space-y-4">
             <HandoverStatsBar />
-            <WorkflowErrorBanner message={error} />
             <HandoverFilterBar />
             <HandoverRecordList />
         </div>
@@ -133,12 +109,9 @@ function HandoverContent() {
 }
 
 function ReturnContent() {
-    const error = useAppSelector(selectReturnError)
-
     return (
         <div className="space-y-4">
             <ReturnStatsBar />
-            <WorkflowErrorBanner message={error} />
             <ReturnActivePanel />
             <ReturnFilterBar />
             <ReturnRecordList />
@@ -203,7 +176,7 @@ export function WorkplacePage() {
     const providers = useAppSelector(selectShippingProviders)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
-    const { scanError, handleScan } = useScanProcessor()
+    const { handleScan } = useScanProcessor()
     const [focusSignal, setFocusSignal] = React.useState(0)
 
     const shouldShowShippingProvider = shouldRequireShippingProvider(scanInputType)
@@ -415,10 +388,6 @@ export function WorkplacePage() {
                     >
                         🗑 {isRemoveMode ? 'Tắt chế độ xóa' : 'Chế độ xóa'}
                     </button>
-
-                    <div className="mt-3">
-                        <ErrorMessage message={scanError} />
-                    </div>
                 </section>
             </aside>
 

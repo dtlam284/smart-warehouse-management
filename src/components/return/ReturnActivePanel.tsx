@@ -1,31 +1,35 @@
 import * as React from 'react'
-import { Button, ErrorMessage, Spinner } from '@/components/ui'
+import { Button, Spinner } from '@/components/ui'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
     selectActiveReturn,
     selectActiveReturnScanPayload,
     selectIsConfirmingReturn,
     selectIsLoadingReturnDetail,
-    selectReturnError,
-    selectReturnFilters,
 } from '@/store/selectors/returnSelectors'
 import { selectWarehouseHasLayout } from '@/store/selectors/warehouseSelectors'
 import {
     clearActiveReturn,
-    clearReturnError,
     confirmReturn,
     confirmReturnNoLayout,
-    fetchReturnList,
-    loadReturnStats,
 } from '@/store/slices/returnSlice'
 import { showNotification } from '@/store/slices/notificationSlice'
 import { getDefaultQuantities, validateReturnQuantity } from '@/validations/returnValidation'
-import { ContainerPickerModal, type IReturnContainerValue } from './ContainerPickerModal'
+import {
+    ContainerPickerModal,
+    IReturnContainerValue,
+} from './ContainerPickerModal'
 import { ReturnEmptyPanel } from './ReturnEmptyPanel'
-import { ReturnItemRow } from './ReturnItemRow'
 import { ReturnTypeSelector } from './ReturnTypeSelector'
-import type { IConfirmReturnRequest, IGetReturnDetailRequest } from '@/models/return/ReturnDTO'
-import type { IReturnDetail, IReturnProduct, ReturnType } from '@/models/return/ReturnInterface'
+import type {
+    IConfirmReturnRequest,
+    IGetReturnDetailRequest,
+} from '@/models/return/ReturnDTO'
+import type {
+    IReturnDetail,
+    IReturnProduct,
+    ReturnType,
+} from '@/models/return/ReturnInterface'
 
 //#region types
 interface IReturnQuantityDraft {
@@ -41,13 +45,22 @@ interface IReturnFormProps {
     activeScanPayload: IGetReturnDetailRequest | null
     hasLayout: boolean
     isConfirming: boolean
-    error: string | null
 }
+
+type QuantityField = keyof IReturnQuantityDraft
 //#endregion types
 
 //#region helpers
 function getItemKey(item: IReturnProduct): string {
     return item.GroupServiceId || item.GroupServiceCode
+}
+
+function toSafeQuantity(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 0
+    }
+
+    return Math.max(0, Math.trunc(value))
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -157,6 +170,13 @@ function validateReturnForm(
             damagedQty: 0,
         }
 
+        const totalHandled = quantity.goodQty + quantity.damagedQty
+
+        if (totalHandled !== item.TotalQuantity) {
+            errors[key] = `${item.GroupServiceName}: Tổng số lượng đạt và lỗi phải bằng ${item.TotalQuantity}`
+            continue
+        }
+
         const result = validateReturnQuantity(
             returnType,
             quantity.goodQty,
@@ -175,7 +195,142 @@ function validateReturnForm(
         formError: null,
     }
 }
+
+function shouldLockQuantityByReturnType(returnType: ReturnType | null): boolean {
+    return returnType === 'FULL_RETURN' || returnType === 'DEFECTIVE_RETURN'
+}
 //#endregion helpers
+
+//#region quantity controls
+function QuantityStepper({
+    label,
+    value,
+    disabled,
+    canDecrease,
+    canIncrease,
+    onChange,
+}: {
+    label: string
+    value: number
+    disabled: boolean
+    canDecrease: boolean
+    canIncrease: boolean
+    onChange: (value: number) => void
+}) {
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        onChange(toSafeQuantity(Number(event.target.value)))
+    }
+
+    return (
+        <div className="space-y-2">
+            <div className="text-sm font-black text-slate-800">{label}</div>
+
+            <div className="grid min-w-[150px] grid-cols-[44px_1fr_44px] overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
+                <button
+                    type="button"
+                    disabled={disabled || !canDecrease}
+                    onClick={() => onChange(value - 1)}
+                    className="flex h-12 items-center justify-center border-r border-slate-200 text-xl font-black text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                    −
+                </button>
+
+                <input
+                    type="number"
+                    min={0}
+                    value={value}
+                    disabled={disabled}
+                    onChange={handleInputChange}
+                    className="h-12 min-w-0 border-0 bg-white text-center text-xl font-black text-slate-900 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                />
+
+                <button
+                    type="button"
+                    disabled={disabled || !canIncrease}
+                    onClick={() => onChange(value + 1)}
+                    className="flex h-12 items-center justify-center border-l border-slate-200 text-xl font-black text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                    +
+                </button>
+            </div>
+        </div>
+    )
+}
+
+function ReturnQuantityRow({
+    item,
+    returnType,
+    goodQty,
+    damagedQty,
+    disabled,
+    onGoodQtyChange,
+    onDamagedQtyChange,
+}: {
+    item: IReturnProduct
+    returnType: ReturnType | null
+    goodQty: number
+    damagedQty: number
+    disabled: boolean
+    onGoodQtyChange: (value: number) => void
+    onDamagedQtyChange: (value: number) => void
+}) {
+    const total = item.TotalQuantity
+    const totalHandled = goodQty + damagedQty
+    const isLockedByType = shouldLockQuantityByReturnType(returnType)
+    const isControlDisabled = disabled || isLockedByType || !returnType
+
+    const canIncreaseGood = goodQty + damagedQty < total
+    const canIncreaseDamaged = goodQty + damagedQty < total
+
+    return (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-4 xl:grid-cols-[minmax(280px,1fr)_520px] xl:items-start">
+                <div className="min-w-0 space-y-2">
+                    <div className="text-lg font-black leading-6 text-slate-900">
+                        {item.GroupServiceName}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-sm font-bold text-blue-700">
+                        <span>{item.GroupServiceCode}</span>
+                        <span className="text-slate-400">·</span>
+                        <span>
+                            Đã xử lý: {totalHandled}/{total}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-2">
+                        <div className="text-sm font-black text-slate-800">Tổng</div>
+
+                        <div className="flex h-12 min-w-[150px] items-center rounded-xl border border-slate-300 bg-white px-4 shadow-sm">
+                            <span className="text-xl font-black text-slate-900">{total}</span>
+                        </div>
+                    </div>
+
+                    <QuantityStepper
+                        label="Đạt"
+                        value={goodQty}
+                        disabled={isControlDisabled}
+                        canDecrease={goodQty > 0}
+                        canIncrease={canIncreaseGood}
+                        onChange={onGoodQtyChange}
+                    />
+
+                    <QuantityStepper
+                        label="Lỗi"
+                        value={damagedQty}
+                        disabled={isControlDisabled}
+                        canDecrease={damagedQty > 0}
+                        canIncrease={canIncreaseDamaged}
+                        onChange={onDamagedQtyChange}
+                    />
+                </div>
+            </div>
+        </div>
+    )
+}
+//#endregion quantity controls
 
 //#region form
 function ReturnForm({
@@ -183,54 +338,46 @@ function ReturnForm({
     activeScanPayload,
     hasLayout,
     isConfirming,
-    error,
 }: IReturnFormProps) {
     const dispatch = useAppDispatch()
-    const returnFilters = useAppSelector(selectReturnFilters)
 
     const [returnType, setReturnType] = React.useState<ReturnType | null>(null)
     const [quantities, setQuantities] = React.useState<ReturnQuantityMap>(() =>
         buildInitialQuantities(activeReturn),
     )
-    const [validationErrors, setValidationErrors] = React.useState<ReturnValidationMap>({})
-    const [formError, setFormError] = React.useState<string | null>('Vui lòng chọn loại hoàn trả')
     const [containerModalOpen, setContainerModalOpen] = React.useState(false)
     const [pendingRequest, setPendingRequest] = React.useState<IConfirmReturnRequest | null>(null)
 
-    const refreshReturnOverview = React.useCallback(() => {
-        void dispatch(
-            fetchReturnList({
-                PageIndex: 1,
-                PageSize: returnFilters.PageSize ?? 10,
-                ShippingUnitId: activeReturn.ShippingUnitId || undefined,
-            }),
-        )
+    const notifyWarning = React.useCallback(
+        (message: string) => {
+            dispatch(
+                showNotification({
+                    type: 'warning',
+                    message,
+                }),
+            )
+        },
+        [dispatch],
+    )
 
-        void dispatch(loadReturnStats({}))
-    }, [activeReturn.ShippingUnitId, dispatch, returnFilters.PageSize])
-
-    const handleReturnSuccess = React.useCallback(() => {
-        setContainerModalOpen(false)
-        setPendingRequest(null)
-        setValidationErrors({})
-        setFormError(null)
-
-        dispatch(
-            showNotification({
-                type: 'success',
-                message: `Xác nhận hoàn ${activeReturn.OrderCode || activeReturn.DeliveryCode} thành công`,
-            }),
-        )
-
-        refreshReturnOverview()
-    }, [activeReturn.DeliveryCode, activeReturn.OrderCode, dispatch, refreshReturnOverview])
-
-    const handleReturnFailure = React.useCallback(
-        (errorValue: unknown) => {
+    const notifyError = React.useCallback(
+        (message: string) => {
             dispatch(
                 showNotification({
                     type: 'error',
-                    message: getErrorMessage(errorValue, 'Không thể xác nhận hàng hoàn'),
+                    message,
+                }),
+            )
+        },
+        [dispatch],
+    )
+
+    const notifySuccess = React.useCallback(
+        (message: string) => {
+            dispatch(
+                showNotification({
+                    type: 'success',
+                    message,
                 }),
             )
         },
@@ -240,48 +387,45 @@ function ReturnForm({
     const handleReturnTypeChange = (nextType: ReturnType) => {
         setReturnType(nextType)
         setQuantities(applyReturnTypeQuantities(activeReturn, nextType))
-        setValidationErrors({})
-        setFormError(null)
     }
 
     const updateItemQuantity = (
         item: IReturnProduct,
-        field: keyof IReturnQuantityDraft,
+        field: QuantityField,
         value: number,
     ) => {
         const key = getItemKey(item)
 
-        setQuantities((current) => ({
-            ...current,
-            [key]: {
-                ...(current[key] ?? { goodQty: 0, damagedQty: 0 }),
-                [field]: value,
-            },
-        }))
-
-        setValidationErrors((current) => {
-            if (!current[key]) {
-                return current
+        setQuantities((current) => {
+            const currentQuantity = current[key] ?? {
+                goodQty: 0,
+                damagedQty: 0,
             }
 
-            const nextErrors = { ...current }
-            delete nextErrors[key]
+            const nextValue = toSafeQuantity(value)
+            const otherField: QuantityField = field === 'goodQty' ? 'damagedQty' : 'goodQty'
+            const otherValue = currentQuantity[otherField]
+            const maxAllowedValue = Math.max(0, item.TotalQuantity - otherValue)
+            const guardedValue = Math.min(nextValue, maxAllowedValue)
 
-            return nextErrors
+            return {
+                ...current,
+                [key]: {
+                    ...currentQuantity,
+                    [field]: guardedValue,
+                },
+            }
         })
-
-        if (formError) {
-            setFormError(null)
-        }
     }
 
     const handleSubmit = () => {
         const validation = validateReturnForm(activeReturn, returnType, quantities)
 
-        setValidationErrors(validation.errors)
-        setFormError(validation.formError)
-
         if (!validation.valid || !returnType) {
+            const firstItemError = Object.values(validation.errors)[0]
+            const message = validation.formError || firstItemError || 'Thông tin hoàn trả chưa hợp lệ'
+
+            notifyWarning(message)
             return
         }
 
@@ -300,8 +444,12 @@ function ReturnForm({
 
         void dispatch(confirmReturnNoLayout(request))
             .unwrap()
-            .then(handleReturnSuccess)
-            .catch(handleReturnFailure)
+            .then(() => {
+                notifySuccess('Xác nhận hoàn trả thành công')
+            })
+            .catch((error) => {
+                notifyError(getErrorMessage(error, 'Không thể xác nhận hoàn trả'))
+            })
     }
 
     const handleContainerConfirm = (container: IReturnContainerValue) => {
@@ -313,52 +461,60 @@ function ReturnForm({
             confirmReturn({
                 ...pendingRequest,
                 ContainerId: container.ContainerId,
+                WarehouseItemId: container.WarehouseItemId,
+                WareHouseItemId: container.WarehouseItemId,
                 ContainerCode: container.ContainerCode,
                 Container: container.Container,
             }),
         )
             .unwrap()
-            .then(handleReturnSuccess)
-            .catch(handleReturnFailure)
+            .then(() => {
+                notifySuccess('Xác nhận hoàn trả thành công')
+                setContainerModalOpen(false)
+                setPendingRequest(null)
+            })
+            .catch((error) => {
+                notifyError(getErrorMessage(error, 'Không thể xác nhận hoàn trả'))
+            })
     }
 
     return (
         <>
-            <div className="space-y-4">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <div className="grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-5">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                    <div className="grid gap-4 text-base md:grid-cols-2 xl:grid-cols-4">
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">
+                            <div className="text-sm font-black uppercase text-slate-400">
                                 Mã đơn
                             </div>
-                            <div className="font-mono font-semibold text-blue-700">
+                            <div className="font-mono text-base font-black text-blue-700">
                                 {activeReturn.OrderCode || '-'}
                             </div>
                         </div>
 
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">
+                            <div className="text-sm font-black uppercase text-slate-400">
                                 Mã kiện
                             </div>
-                            <div className="font-mono font-semibold text-purple-700">
+                            <div className="font-mono text-base font-black text-purple-700">
                                 {activeReturn.DeliveryCode || '-'}
                             </div>
                         </div>
 
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">
+                            <div className="text-sm font-black uppercase text-slate-400">
                                 Khách hàng
                             </div>
-                            <div className="font-semibold text-slate-700">
+                            <div className="text-base font-black text-slate-700">
                                 {activeReturn.CustomerName || '-'}
                             </div>
                         </div>
 
                         <div>
-                            <div className="text-xs font-semibold uppercase text-slate-400">
+                            <div className="text-sm font-black uppercase text-slate-400">
                                 Đơn vị VC
                             </div>
-                            <div className="font-semibold text-slate-700">
+                            <div className="text-base font-black text-slate-700">
                                 {activeReturn.ShippingUnitName || '-'}
                             </div>
                         </div>
@@ -366,7 +522,7 @@ function ReturnForm({
                 </div>
 
                 <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">
                         Loại hoàn trả
                     </h3>
 
@@ -374,11 +530,11 @@ function ReturnForm({
                 </div>
 
                 <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Số lượng từng SKU
+                    <h3 className="text-sm font-black uppercase tracking-wider text-slate-400">
+                        Số lượng
                     </h3>
 
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {activeReturn.ListItem.map((item) => {
                             const key = getItemKey(item)
                             const quantity = quantities[key] ?? {
@@ -387,12 +543,12 @@ function ReturnForm({
                             }
 
                             return (
-                                <ReturnItemRow
+                                <ReturnQuantityRow
                                     key={key}
                                     item={item}
+                                    returnType={returnType}
                                     goodQty={quantity.goodQty}
                                     damagedQty={quantity.damagedQty}
-                                    error={validationErrors[key]}
                                     disabled={isConfirming}
                                     onGoodQtyChange={(value) =>
                                         updateItemQuantity(item, 'goodQty', value)
@@ -406,11 +562,9 @@ function ReturnForm({
                     </div>
                 </div>
 
-                <ErrorMessage message={formError || error} />
-
-                <div className="flex gap-2">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_140px]">
                     <Button
-                        className="w-full"
+                        className="min-w-0"
                         loading={isConfirming}
                         disabled={isConfirming}
                         onClick={handleSubmit}
@@ -419,6 +573,7 @@ function ReturnForm({
                     </Button>
 
                     <Button
+                        className="min-w-0"
                         variant="secondary"
                         disabled={isConfirming}
                         onClick={() => dispatch(clearActiveReturn())}
@@ -427,11 +582,11 @@ function ReturnForm({
                     </Button>
                 </div>
 
-                <p className="text-center text-xs text-slate-400">
+                {/* <p className="text-center text-sm font-semibold text-slate-400">
                     {hasLayout
                         ? 'Kho có layout: cần quét đơn vị chứa trước khi xác nhận.'
                         : 'Kho không có layout: xác nhận trực tiếp, không cần container.'}
-                </p>
+                </p> */}
             </div>
 
             <ContainerPickerModal
@@ -451,41 +606,26 @@ function ReturnForm({
 
 //#region component
 export function ReturnActivePanel() {
-    const dispatch = useAppDispatch()
-
     const activeReturn = useAppSelector(selectActiveReturn)
     const activeScanPayload = useAppSelector(selectActiveReturnScanPayload)
     const isLoadingDetail = useAppSelector(selectIsLoadingReturnDetail)
     const isConfirming = useAppSelector(selectIsConfirmingReturn)
-    const error = useAppSelector(selectReturnError)
     const hasLayout = useAppSelector(selectWarehouseHasLayout)
-
-    React.useEffect(() => {
-        if (!error) {
-            return
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            dispatch(clearReturnError())
-        }, 3500)
-
-        return () => window.clearTimeout(timeoutId)
-    }, [dispatch, error])
 
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Đơn / Kiện hoàn trả
+                <h2 className="text-sm font-black uppercase tracking-wider text-slate-400">
+                    Đơn hàng hoàn trả
                 </h2>
 
-                <span className="rounded bg-purple-50 px-2 py-1 font-mono text-xs font-semibold text-purple-700">
+                <span className="rounded bg-purple-50 px-3 py-1 font-mono text-sm font-black text-purple-700">
                     RETURN
                 </span>
             </div>
 
             {isLoadingDetail ? (
-                <div className="flex items-center justify-center gap-2 py-14 text-sm text-slate-500">
+                <div className="flex items-center justify-center gap-2 py-14 text-base font-semibold text-slate-500">
                     <Spinner size="sm" />
                     Đang tải thông tin đơn hoàn...
                 </div>
@@ -506,7 +646,6 @@ export function ReturnActivePanel() {
                     activeScanPayload={activeScanPayload}
                     hasLayout={hasLayout}
                     isConfirming={isConfirming}
-                    error={error}
                 />
             ) : null}
         </section>

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { buildScanPayload } from '@/models/common'
 import { useAppDispatch, useAppSelector } from '@/store'
 import {
@@ -9,7 +9,9 @@ import {
 } from '@/store/selectors/appSelectors'
 import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
 import {
+    selectIsAllItemsHandled,
     selectPackingActiveDetail,
+    selectPackingActiveScanPayload,
     selectPackingScannedSKUs,
 } from '@/store/selectors/packingSelectors'
 import {
@@ -18,14 +20,21 @@ import {
     removeHandoverRecord,
 } from '@/store/slices/handoverSlice'
 import { showNotification } from '@/store/slices/notificationSlice'
-import { cancelPacking, incrementSKU, loadPackageDetails } from '@/store/slices/packingSlice'
+import {
+    cancelPacking,
+    completePacking,
+    incrementSKU,
+    loadPackageDetails,
+} from '@/store/slices/packingSlice'
 import { loadReturnDetail, removeReturnRecord } from '@/store/slices/returnSlice'
 import type { ScanInputType } from '@/models/common'
+import type {
+    IGetPackageDetailsRequest,
+    IUpdatePackingRequest,
+} from '@/models/packing/PackingDTO'
 
 //#region types
 interface IUseScanProcessorResult {
-    scanError: string | null
-    clearScanError: () => void
     handleScan: (code: string) => void
 }
 
@@ -36,7 +45,47 @@ type WorkflowScanPayload = ReturnType<typeof buildScanPayload> & {
 
 //#region helpers
 function shouldAttachShippingUnit(scanInputType: ScanInputType): boolean {
-    return scanInputType === 'DELIVERYCODE'
+    return scanInputType !== 'DELIVERYCODE'
+}
+
+function normalizeCode(value?: string | null): string {
+    return value?.trim().toUpperCase() ?? ''
+}
+
+function getPackingCodeFromPayload(payload: IGetPackageDetailsRequest | null): string {
+    if (!payload) {
+        return ''
+    }
+
+    return normalizeCode(
+        payload.DeliveryCode ??
+            payload.PackageCode ??
+            payload.OrderCode ??
+            payload.OrderCodeRef ??
+            '',
+    )
+}
+
+function buildCompletePackingPayload(payload: IGetPackageDetailsRequest): IUpdatePackingRequest {
+    return {
+        DeliveryCodes: payload.DeliveryCode ? [payload.DeliveryCode] : undefined,
+        PackageCode: payload.PackageCode,
+        OrderCode: payload.OrderCode,
+        OrderCodeRef: payload.OrderCodeRef,
+        Type: payload.Type,
+    }
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'string' && error.trim().length > 0) {
+        return error
+    }
+
+    if (error instanceof Error && error.message.trim().length > 0) {
+        return error.message
+    }
+
+    return fallback
 }
 //#endregion helpers
 
@@ -49,23 +98,57 @@ export function useScanProcessor(): IUseScanProcessorResult {
     const isRemoveMode = useAppSelector(selectIsRemoveMode)
     const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
     const activeDetail = useAppSelector(selectPackingActiveDetail)
+    const activeScanPayload = useAppSelector(selectPackingActiveScanPayload)
     const scannedSKUs = useAppSelector(selectPackingScannedSKUs)
+    const isAllPackingItemsHandled = useAppSelector(selectIsAllItemsHandled)
     const handoverFilters = useAppSelector(selectHandoverFilters)
 
-    const [scanError, setScanError] = useState<string | null>(null)
+    const notifyScanWarning = useCallback(
+        (message: string) => {
+            dispatch(
+                showNotification({
+                    type: 'warning',
+                    message,
+                }),
+            )
+        },
+        [dispatch],
+    )
 
-    const clearScanError = useCallback(() => {
-        setScanError(null)
-    }, [])
+    const notifyScanError = useCallback(
+        (message: string) => {
+            dispatch(
+                showNotification({
+                    type: 'error',
+                    message,
+                }),
+            )
+        },
+        [dispatch],
+    )
+
+    const notifyScanSuccess = useCallback(
+        (message: string) => {
+            dispatch(
+                showNotification({
+                    type: 'success',
+                    message,
+                }),
+            )
+        },
+        [dispatch],
+    )
 
     const requireShippingProvider = useCallback((): string | null => {
         if (!selectedShippingProviderId) {
-            setScanError('Vui lòng chọn đơn vị vận chuyển trước khi quét mã vận đơn')
+            notifyScanWarning(
+                'Mã này cần chọn đơn vị vận chuyển trước khi xử lý. Mã vận đơn sẽ tự xác định đơn vị vận chuyển.',
+            )
             return null
         }
 
         return selectedShippingProviderId
-    }, [selectedShippingProviderId])
+    }, [notifyScanWarning, selectedShippingProviderId])
 
     const buildWorkflowScanPayload = useCallback(
         (code: string): WorkflowScanPayload | null => {
@@ -89,7 +172,7 @@ export function useScanProcessor(): IUseScanProcessorResult {
         [requireShippingProvider, scanInputType],
     )
 
-    const handlePackingScan = useCallback(
+    const loadNewPackingDetail = useCallback(
         (code: string) => {
             const payload = buildWorkflowScanPayload(code)
 
@@ -97,40 +180,105 @@ export function useScanProcessor(): IUseScanProcessorResult {
                 return
             }
 
+            void dispatch(loadPackageDetails(payload as Parameters<typeof loadPackageDetails>[0]))
+                .unwrap()
+                .catch((error) => {
+                    notifyScanError(getErrorMessage(error, 'Không thể tải thông tin đóng gói'))
+                })
+        },
+        [buildWorkflowScanPayload, dispatch, notifyScanError],
+    )
+
+    const completeCurrentPacking = useCallback(() => {
+        if (!activeScanPayload) {
+            notifyScanWarning('Không tìm thấy mã đóng gói hiện tại')
+            return
+        }
+
+        if (!isAllPackingItemsHandled) {
+            notifyScanWarning('Chưa quét đủ số lượng SKU để hoàn thành đóng gói')
+            return
+        }
+
+        void dispatch(completePacking(buildCompletePackingPayload(activeScanPayload)))
+            .unwrap()
+            .then(() => {
+                notifyScanSuccess('Hoàn thành đóng gói thành công')
+            })
+            .catch((error) => {
+                notifyScanError(getErrorMessage(error, 'Không thể hoàn thành đóng gói'))
+            })
+    }, [
+        activeScanPayload,
+        dispatch,
+        isAllPackingItemsHandled,
+        notifyScanError,
+        notifyScanSuccess,
+        notifyScanWarning,
+    ])
+
+    const handlePackingScan = useCallback(
+        (code: string) => {
             if (isRemoveMode) {
+                const payload = buildWorkflowScanPayload(code)
+
+                if (!payload) {
+                    return
+                }
+
                 void dispatch(cancelPacking(payload as Parameters<typeof cancelPacking>[0]))
+                    .unwrap()
+                    .catch((error) => {
+                        notifyScanError(getErrorMessage(error, 'Không thể xóa đóng gói'))
+                    })
+
                 return
             }
 
             if (!activeDetail) {
-                void dispatch(loadPackageDetails(payload as Parameters<typeof loadPackageDetails>[0]))
+                loadNewPackingDetail(code)
                 return
             }
 
-            const matchedSKU = activeDetail.PackageDetails.find(
-                (item) => item.ListingPropertyCode === code,
-            )
+            const normalizedScannedCode = normalizeCode(code)
+            const activePackingCode =
+                getPackingCodeFromPayload(activeScanPayload) || normalizeCode(activeDetail.Code)
 
-            if (!matchedSKU) {
-                setScanError('SKU không có trong kiện này')
+            if (normalizedScannedCode === activePackingCode) {
+                completeCurrentPacking()
                 return
             }
 
-            const currentScannedCount = scannedSKUs[matchedSKU.ListingPropertyCode] ?? 0
+            const matchedSKU = activeDetail.PackageDetails.find((item) => {
+                return normalizeCode(item.ListingPropertyCode) === normalizedScannedCode
+            })
 
-            if (currentScannedCount >= matchedSKU.Quantity) {
-                dispatch(
-                    showNotification({
-                        type: 'warning',
-                        message: `SKU ${matchedSKU.ListingPropertyCode} đã đủ số lượng`,
-                    }),
-                )
+            if (matchedSKU) {
+                const currentScannedCount = scannedSKUs[matchedSKU.ListingPropertyCode] ?? 0
+
+                if (currentScannedCount >= matchedSKU.Quantity) {
+                    notifyScanWarning(`SKU ${matchedSKU.ListingPropertyCode} đã đủ số lượng`)
+                    return
+                }
+
+                dispatch(incrementSKU(matchedSKU.ListingPropertyCode))
                 return
             }
 
-            dispatch(incrementSKU(code))
+            loadNewPackingDetail(code)
         },
-        [activeDetail, buildWorkflowScanPayload, dispatch, isRemoveMode, scannedSKUs],
+        [
+            activeDetail,
+            activeScanPayload,
+            buildWorkflowScanPayload,
+            completeCurrentPacking,
+            dispatch,
+            isRemoveMode,
+            loadNewPackingDetail,
+            notifyScanError,
+            notifyScanWarning,
+            scannedSKUs,
+        ],
     )
 
     const handleHandoverScan = useCallback(
@@ -143,12 +291,19 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
             if (isRemoveMode) {
                 void dispatch(removeHandoverRecord(payload as Parameters<typeof removeHandoverRecord>[0]))
+                    .unwrap()
+                    .catch((error) => {
+                        notifyScanError(getErrorMessage(error, 'Không thể xóa bản ghi bàn giao'))
+                    })
+
                 return
             }
 
             void dispatch(addHandoverRecord(payload as Parameters<typeof addHandoverRecord>[0]))
                 .unwrap()
                 .then(() => {
+                    notifyScanSuccess('Bàn giao mã vừa quét thành công')
+
                     void dispatch(
                         fetchHandoverList({
                             ...handoverFilters,
@@ -158,11 +313,18 @@ export function useScanProcessor(): IUseScanProcessorResult {
                         }),
                     )
                 })
-                .catch(() => {
-                    // rejected error is stored in handover slice
+                .catch((error) => {
+                    notifyScanError(getErrorMessage(error, 'Không thể bàn giao mã vừa quét'))
                 })
         },
-        [buildWorkflowScanPayload, dispatch, handoverFilters, isRemoveMode],
+        [
+            buildWorkflowScanPayload,
+            dispatch,
+            handoverFilters,
+            isRemoveMode,
+            notifyScanError,
+            notifyScanSuccess,
+        ],
     )
 
     const handleReturnScan = useCallback(
@@ -175,12 +337,21 @@ export function useScanProcessor(): IUseScanProcessorResult {
 
             if (isRemoveMode) {
                 void dispatch(removeReturnRecord(payload as Parameters<typeof removeReturnRecord>[0]))
+                    .unwrap()
+                    .catch((error) => {
+                        notifyScanError(getErrorMessage(error, 'Không thể xóa bản ghi hoàn'))
+                    })
+
                 return
             }
 
             void dispatch(loadReturnDetail(payload as Parameters<typeof loadReturnDetail>[0]))
+                .unwrap()
+                .catch((error) => {
+                    notifyScanError(getErrorMessage(error, 'Không thể tải thông tin hoàn trả'))
+                })
         },
-        [buildWorkflowScanPayload, dispatch, isRemoveMode],
+        [buildWorkflowScanPayload, dispatch, isRemoveMode, notifyScanError],
     )
 
     const handleScan = useCallback(
@@ -190,8 +361,6 @@ export function useScanProcessor(): IUseScanProcessorResult {
             if (!code) {
                 return
             }
-
-            setScanError(null)
 
             switch (workMode) {
                 case 'PACKING':
@@ -207,15 +376,19 @@ export function useScanProcessor(): IUseScanProcessorResult {
                     return
 
                 case 'NONE':
-                    setScanError('Vui lòng chọn chế độ làm việc trước khi quét')
+                    notifyScanWarning('Vui lòng chọn chế độ làm việc trước khi quét')
             }
         },
-        [handleHandoverScan, handlePackingScan, handleReturnScan, workMode],
+        [
+            handleHandoverScan,
+            handlePackingScan,
+            handleReturnScan,
+            notifyScanWarning,
+            workMode,
+        ],
     )
 
     return {
-        scanError,
-        clearScanError,
         handleScan,
     }
 }
