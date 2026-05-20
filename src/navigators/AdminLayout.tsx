@@ -1,8 +1,7 @@
 import React from 'react'
 import { Outlet, useNavigate } from 'react-router'
 import { ChevronDown, LogOut } from 'lucide-react'
-import { LanguageToggle } from '@/components/LanguageToggle'
-import { ThemeToggle } from '@/components/ThemeToggle'
+// import { LanguageToggle } from '@/components/LanguageToggle'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { logoutThunk, selectAuthUser } from '@/store/slices/authSlice'
 
@@ -201,8 +200,7 @@ export function AdminLayout() {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                        <LanguageToggle />
-                        <ThemeToggle />
+                        {/* <LanguageToggle /> */}
 
                         <div ref={accountMenuRef} className="relative">
                             <button
