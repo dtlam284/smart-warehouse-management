@@ -186,7 +186,7 @@ export function PackingFilterBar() {
             <div
                 className={
                     shouldShowShippingProvider
-                        ? 'grid gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]'
+                        ? 'grid items-end gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]'
                         : 'grid gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
                 }
             >
@@ -207,8 +207,8 @@ export function PackingFilterBar() {
                 </div>
 
                 {shouldShowShippingProvider ? (
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-slate-700">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-base font-bold leading-6 text-slate-700">
                             Đơn vị vận chuyển
                         </label>
 
@@ -220,11 +220,11 @@ export function PackingFilterBar() {
                     </div>
                 ) : null}
 
-                <div className="flex items-end">
+                <div className="flex">
                     <Button onClick={handleApplyFilters}>Lọc</Button>
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex">
                     <Button variant="secondary" onClick={handleResetFilters}>
                         Đặt lại
                     </Button>

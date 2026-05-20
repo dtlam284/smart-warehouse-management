@@ -180,7 +180,7 @@ export function ReturnFilterBar() {
             <div
                 className={
                     shouldShowShippingProvider
-                        ? 'grid gap-3 xl:grid-cols-[170px_1fr_230px_auto_auto]'
+                        ? 'grid items-end gap-3 xl:grid-cols-[170px_1fr_230px_auto_auto]'
                         : 'grid gap-3 xl:grid-cols-[170px_1fr_auto_auto]'
                 }
             >
@@ -201,8 +201,8 @@ export function ReturnFilterBar() {
                 </div>
 
                 {shouldShowShippingProvider ? (
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-slate-700">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-base font-bold leading-6 text-slate-700">
                             Đơn vị vận chuyển
                         </label>
 

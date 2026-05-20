@@ -1,6 +1,4 @@
 import * as React from 'react'
-import { X } from 'lucide-react'
-import { Button } from './button'
 import {
     Dialog,
     DialogContent,
@@ -30,7 +28,6 @@ export function Modal({
     description,
     children,
     footer,
-    closeLabel = 'Đóng',
 }: IModalProps) {
     return (
         <Dialog
@@ -43,22 +40,16 @@ export function Modal({
         >
             <DialogContent className="max-w-lg">
                 <DialogHeader>
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                            <DialogTitle>{title}</DialogTitle>
-                            {description ? <DialogDescription>{description}</DialogDescription> : null}
-                        </div>
+                    <div className="space-y-1 pr-8">
+                        <DialogTitle className="text-xl font-black text-slate-900">
+                            {title}
+                        </DialogTitle>
 
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={onClose}
-                            aria-label={closeLabel}
-                            className="-mr-2 -mt-2"
-                        >
-                            <X className="h-4 w-4" />
-                        </Button>
+                        {description ? (
+                            <DialogDescription className="text-base font-medium leading-6 text-slate-500">
+                                {description}
+                            </DialogDescription>
+                        ) : null}
                     </div>
                 </DialogHeader>
 

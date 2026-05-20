@@ -139,8 +139,22 @@ function normalizeReturnListResponse(
     }
 }
 
+function buildLayoutRequest(request: IConfirmReturnRequest): IConfirmReturnRequest {
+    const { ContainerCode: _containerCode, WarehouseItemId: _warehouseItemId, WareHouseItemId: _wareHouseItemId, ...payload } =
+        request
+
+    return payload
+}
+
 function buildNoLayoutRequest(request: IConfirmReturnRequest): IConfirmReturnRequest {
-    const { ContainerCode: _containerCode, ContainerId: _containerId, Container: _container, ...payload } = request
+    const {
+        ContainerCode: _containerCode,
+        ContainerId: _containerId,
+        WarehouseItemId: _warehouseItemId,
+        WareHouseItemId: _wareHouseItemId,
+        Container: _container,
+        ...payload
+    } = request
 
     return payload
 }
@@ -157,7 +171,7 @@ export const returnService = {
     async confirmReturn(request: IConfirmReturnRequest): Promise<IReturnRecord[]> {
         const response = await apiClient.put<unknown>(
             API_ENDPOINTS.returnDelivery.confirmReturn,
-            request,
+            buildLayoutRequest(request),
         )
 
         return normalizeReturnRecords(response)

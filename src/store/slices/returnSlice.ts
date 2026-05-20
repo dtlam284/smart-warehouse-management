@@ -32,8 +32,13 @@ function hasReturnItems(request: Pick<IConfirmReturnRequest, 'ListItems'>): bool
     return request.ListItems.length > 0
 }
 
-function hasContainer(request: Pick<IConfirmReturnRequest, 'ContainerId' | 'ContainerCode'>): boolean {
-    return Boolean(request.ContainerId && request.ContainerId > 0 && request.ContainerCode?.trim())
+function hasContainer(request: IConfirmReturnRequest): boolean {
+    return Boolean(
+        request.ContainerId &&
+            request.ContainerId > 0 &&
+            request.ContainerCode?.trim() &&
+            request.WarehouseItemId?.trim(),
+    )
 }
 
 function getRecordKey(record: IReturnRecord): string {

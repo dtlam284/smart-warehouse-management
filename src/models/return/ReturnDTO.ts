@@ -18,11 +18,13 @@ export interface IConfirmReturnRequest {
     PackageCode?: string
     Type: ScanInputType
     ShippingUnitId: string
-    ContainerId?: number
-    ContainerCode?: string
-    Container?: IWarehouseContainer
     ReturnType: ReturnType
     ListItems: IReturnItemPayload[]
+    WarehouseItemId?: string
+    WareHouseItemId?: string
+    ContainerId?: number
+    Container?: IWarehouseContainer
+    ContainerCode?: string
 }
 
 export interface IRemoveReturnRequest {

@@ -28,12 +28,13 @@ export interface IShippingProvidersResponse {
     Code?: number
     Message?: string
     Data?: IShippingProvider[]
-    Result: IShippingProvider[]
+    Result?: IShippingProvider[]
 }
 
 export interface IWarehouseContainer {
     Id: number
     WarehouseItemId?: string | null
+    WareHouseItemId?: string | null
     CustomerId?: string | null
     CustomerName?: string | null
     Type: string
@@ -42,6 +43,9 @@ export interface IWarehouseContainer {
     WarehouseItemLayoutId?: string | null
     WarehouseItemLayoutCode?: string | null
     WarehouseItemLayoutPath?: string | null
+    WareHouseItemLayoutId?: string | null
+    WareHouseItemLayoutCode?: string | null
+    WareHouseItemLayoutPath?: string | null
     Status?: string | null
     Usage?: string | null
     Putaway?: boolean
@@ -56,4 +60,7 @@ export interface IWarehouseContainerResponse {
     Message?: string
     Detail?: string | null
     Data?: IWarehouseContainer | null
+    Result?: IWarehouseContainer | null
+    data?: IWarehouseContainer | null
+    result?: IWarehouseContainer | null
 }

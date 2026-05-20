@@ -6,7 +6,7 @@ export interface IGetPackageDetailsRequest {
     OrderCodeRef?: string
     PackageCode?: string
     Type: ScanInputType
-    SkippingUnitId?: string
+    ShippingUnitId?: string
 }
 
 export interface IUpdatePackingRequest {

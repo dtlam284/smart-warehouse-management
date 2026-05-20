@@ -18,7 +18,6 @@ const LAYOUT_CONFIG_KEY = 'LAYOUT'
 //#region helpers
 function parseWarehouseOperationConfig(configs: GetConfigResponse): IWarehouseOperationConfig {
     const warehouseConfig = configs.find((item) => item.Key === WAREHOUSE_CONFIG_KEY)
-
     const layoutConfig = warehouseConfig?.Child?.find((item) => item.Key === LAYOUT_CONFIG_KEY)
 
     return {
@@ -26,22 +25,151 @@ function parseWarehouseOperationConfig(configs: GetConfigResponse): IWarehouseOp
     }
 }
 
-function normalizeContainerResponse(
-    response: IWarehouseContainer | IWarehouseContainerResponse,
-): IWarehouseContainer {
-    if ('Data' in response) {
-        if (!response.Data) {
-            throw new Error(response.Message || 'Không tìm thấy thông tin thùng chứa')
-        }
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null
+}
 
-        return response.Data
+function isWarehouseContainer(value: unknown): value is IWarehouseContainer {
+    if (!isRecord(value)) {
+        return false
     }
 
-    if ('Id' in response && 'Code' in response) {
+    return typeof value.Id === 'number' && typeof value.Code === 'string'
+}
+
+function getStringField(source: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+        const value = source[key]
+
+        if (typeof value === 'string' && value.trim().length > 0) {
+            return value
+        }
+    }
+
+    return null
+}
+
+function normalizeWarehouseContainer(container: IWarehouseContainer): IWarehouseContainer {
+    const record = container as unknown as Record<string, unknown>
+
+    const warehouseItemId = getStringField(record, [
+        'WarehouseItemId',
+        'WareHouseItemId',
+        'warehouseItemId',
+        'wareHouseItemId',
+        'WarehouseItemID',
+        'WareHouseItemID',
+        'warehouseItemID',
+        'wareHouseItemID',
+        'warehouse_item_id',
+    ])
+
+    const warehouseItemLayoutId = getStringField(record, [
+        'WarehouseItemLayoutId',
+        'WareHouseItemLayoutId',
+        'warehouseItemLayoutId',
+        'wareHouseItemLayoutId',
+    ])
+
+    const warehouseItemLayoutCode = getStringField(record, [
+        'WarehouseItemLayoutCode',
+        'WareHouseItemLayoutCode',
+        'warehouseItemLayoutCode',
+        'wareHouseItemLayoutCode',
+    ])
+
+    const warehouseItemLayoutPath = getStringField(record, [
+        'WarehouseItemLayoutPath',
+        'WareHouseItemLayoutPath',
+        'warehouseItemLayoutPath',
+        'wareHouseItemLayoutPath',
+    ])
+
+    return {
+        ...container,
+        WarehouseItemId: warehouseItemId ?? container.WarehouseItemId ?? container.WareHouseItemId ?? null,
+        WareHouseItemId: warehouseItemId ?? container.WareHouseItemId ?? container.WarehouseItemId ?? null,
+        WarehouseItemLayoutId:
+            warehouseItemLayoutId ??
+            container.WarehouseItemLayoutId ??
+            container.WareHouseItemLayoutId ??
+            null,
+        WareHouseItemLayoutId:
+            warehouseItemLayoutId ??
+            container.WareHouseItemLayoutId ??
+            container.WarehouseItemLayoutId ??
+            null,
+        WarehouseItemLayoutCode:
+            warehouseItemLayoutCode ??
+            container.WarehouseItemLayoutCode ??
+            container.WareHouseItemLayoutCode ??
+            null,
+        WareHouseItemLayoutCode:
+            warehouseItemLayoutCode ??
+            container.WareHouseItemLayoutCode ??
+            container.WarehouseItemLayoutCode ??
+            null,
+        WarehouseItemLayoutPath:
+            warehouseItemLayoutPath ??
+            container.WarehouseItemLayoutPath ??
+            container.WareHouseItemLayoutPath ??
+            null,
+        WareHouseItemLayoutPath:
+            warehouseItemLayoutPath ??
+            container.WareHouseItemLayoutPath ??
+            container.WarehouseItemLayoutPath ??
+            null,
+    }
+}
+
+function unwrapContainerResponse(response: unknown): unknown {
+    if (!isRecord(response)) {
         return response
     }
 
-    throw new Error('Không tìm thấy thông tin thùng chứa')
+    if ('Data' in response) {
+        return response.Data
+    }
+
+    if ('data' in response) {
+        return response.data
+    }
+
+    if ('Result' in response) {
+        return response.Result
+    }
+
+    if ('result' in response) {
+        return response.result
+    }
+
+    return response
+}
+
+function getResponseMessage(response: unknown): string | null {
+    if (!isRecord(response)) {
+        return null
+    }
+
+    const message = response.Message ?? response.message ?? response.Detail ?? response.detail
+
+    return typeof message === 'string' && message.trim().length > 0 ? message : null
+}
+
+function normalizeContainerResponse(
+    response: IWarehouseContainer | IWarehouseContainerResponse | unknown,
+): IWarehouseContainer {
+    const unwrapped = unwrapContainerResponse(response)
+
+    if (!unwrapped) {
+        throw new Error(getResponseMessage(response) ?? 'Không tìm thấy thông tin thùng chứa')
+    }
+
+    if (isWarehouseContainer(unwrapped)) {
+        return normalizeWarehouseContainer(unwrapped)
+    }
+
+    throw new Error(getResponseMessage(response) ?? 'Không tìm thấy thông tin thùng chứa')
 }
 //#endregion helpers
 
@@ -63,7 +191,7 @@ export const warehouseService = {
     },
 
     async getShippingProviders(keyword?: string): Promise<IShippingProvider[]> {
-        const response = await apiClient.get<IShippingProvidersResponse>(
+        const response = await apiClient.get<IShippingProvidersResponse | IShippingProvider[]>(
             API_ENDPOINTS.shippingProviders.list,
             {
                 query: {
