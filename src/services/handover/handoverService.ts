@@ -101,7 +101,7 @@ function normalizeHandoverRecord(item: unknown): IHandoverRecord | null {
         DeliveryCode: deliveryCode,
         PackageCode: packageCode || undefined,
         HandoverByName: getStringValue(backendRecord.HandoverByName, '-'),
-        HandoverDate: getStringValue(backendRecord.HandoverDate, new Date().toISOString()),
+        HandoverDate: getStringValue(backendRecord.HandoverDate),
         DeliveryStatus: getNumberValue(backendRecord.DeliveryStatus),
         ShippingUnitId: getStringValue(backendRecord.ShippingUnitId),
         ShippingUnitName: getStringValue(backendRecord.ShippingUnitName, '-'),
@@ -146,11 +146,13 @@ function normalizeHandoverListResponse(
     const data = unwrapApiData(response)
 
     if (Array.isArray(data)) {
+        const records = data
+            .map(normalizeHandoverRecord)
+            .filter((record): record is IHandoverRecord => record !== null)
+
         return {
-            Data: data
-                .map(normalizeHandoverRecord)
-                .filter((record): record is IHandoverRecord => record !== null),
-            TotalRows: data.length,
+            Data: records,
+            TotalRows: records.length,
             PageIndex: fallbackRequest.PageIndex,
             PageSize: fallbackRequest.PageSize,
         }
@@ -175,7 +177,9 @@ function normalizeHandoverListResponse(
             TotalRows:
                 typeof data.Total === 'number'
                     ? data.Total
-                    : records.length,
+                    : typeof data.TotalRows === 'number'
+                      ? data.TotalRows
+                      : records.length,
             PageIndex:
                 typeof data.PageIndex === 'number'
                     ? data.PageIndex
@@ -197,7 +201,9 @@ function normalizeHandoverListResponse(
             TotalRows:
                 typeof data.TotalRows === 'number'
                     ? data.TotalRows
-                    : records.length,
+                    : typeof data.Total === 'number'
+                      ? data.Total
+                      : records.length,
             PageIndex:
                 typeof data.PageIndex === 'number'
                     ? data.PageIndex

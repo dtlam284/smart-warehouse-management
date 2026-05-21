@@ -19,6 +19,7 @@ export interface IPackingRecord {
     PackageCode?: string
     PackerByName: string
     PackingDate: ISODateString
+    ShippingUnitId?: string
     ShippingUnitName: string
     TotalRows: number
 }

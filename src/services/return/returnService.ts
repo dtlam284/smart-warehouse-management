@@ -24,6 +24,14 @@ function unwrapApiData(response: unknown): unknown {
         return response
     }
 
+    if ('Code' in response && typeof response.Code === 'number' && response.Code !== 1) {
+        const message = typeof response.Message === 'string'
+            ? response.Message
+            : 'Thao tác hoàn trả thất bại'
+
+        throw new Error(message)
+    }
+
     if ('Data' in response) {
         return response.Data
     }
@@ -93,9 +101,13 @@ function normalizeReturnListResponse(
                       ? data.TotalRows
                       : data.Result.length,
             PageIndex:
-                typeof data.PageIndex === 'number' ? data.PageIndex : fallbackRequest.PageIndex,
+                typeof data.PageIndex === 'number'
+                    ? data.PageIndex
+                    : fallbackRequest.PageIndex,
             PageSize:
-                typeof data.PageSize === 'number' ? data.PageSize : fallbackRequest.PageSize,
+                typeof data.PageSize === 'number'
+                    ? data.PageSize
+                    : fallbackRequest.PageSize,
         }
     }
 
@@ -109,9 +121,13 @@ function normalizeReturnListResponse(
                       ? data.Total
                       : data.Data.length,
             PageIndex:
-                typeof data.PageIndex === 'number' ? data.PageIndex : fallbackRequest.PageIndex,
+                typeof data.PageIndex === 'number'
+                    ? data.PageIndex
+                    : fallbackRequest.PageIndex,
             PageSize:
-                typeof data.PageSize === 'number' ? data.PageSize : fallbackRequest.PageSize,
+                typeof data.PageSize === 'number'
+                    ? data.PageSize
+                    : fallbackRequest.PageSize,
         }
     }
 
@@ -125,9 +141,13 @@ function normalizeReturnListResponse(
                       ? data.TotalCount
                       : data.Items.length,
             PageIndex:
-                typeof data.PageIndex === 'number' ? data.PageIndex : fallbackRequest.PageIndex,
+                typeof data.PageIndex === 'number'
+                    ? data.PageIndex
+                    : fallbackRequest.PageIndex,
             PageSize:
-                typeof data.PageSize === 'number' ? data.PageSize : fallbackRequest.PageSize,
+                typeof data.PageSize === 'number'
+                    ? data.PageSize
+                    : fallbackRequest.PageSize,
         }
     }
 
@@ -140,8 +160,12 @@ function normalizeReturnListResponse(
 }
 
 function buildLayoutRequest(request: IConfirmReturnRequest): IConfirmReturnRequest {
-    const { ContainerCode: _containerCode, WarehouseItemId: _warehouseItemId, WareHouseItemId: _wareHouseItemId, ...payload } =
-        request
+    const {
+        ContainerCode: _containerCode,
+        WarehouseItemId: _warehouseItemId,
+        WareHouseItemId: _wareHouseItemId,
+        ...payload
+    } = request
 
     return payload
 }

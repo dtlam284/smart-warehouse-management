@@ -70,6 +70,7 @@ interface IBackendPackingRecord {
     Code?: string | null
     PackerByName?: string | null
     PackingDate?: string | null
+    ShippingUnitId?: string | null
     ShippingUnitName?: string | null
     TotalRows?: number
 }
@@ -112,46 +113,6 @@ function getScanCodeFromRequest(request: IGetPackageDetailsRequest): string {
         request.OrderCodeRef ??
         ''
     )
-}
-
-function toLocalDateKey(value?: string): string | null {
-    if (!value) {
-        return null
-    }
-
-    const date = new Date(value)
-
-    if (Number.isNaN(date.getTime())) {
-        return null
-    }
-
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
-
-function normalizeFilterDate(value?: string): string | null {
-    if (!value) {
-        return null
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return value
-    }
-
-    return toLocalDateKey(value)
-}
-
-function filterPackingRecordsByDate(records: IPackingRecord[], date?: string): IPackingRecord[] {
-    const filterDate = normalizeFilterDate(date)
-
-    if (!filterDate) {
-        return records
-    }
-
-    return records.filter((record) => toLocalDateKey(record.PackingDate) === filterDate)
 }
 
 function normalizePackingProduct(item: IBackendPackingProduct): IPackingProduct {
@@ -233,7 +194,8 @@ function normalizePackingRecord(item: unknown): IPackingRecord | null {
         DeliveryCode: deliveryCode,
         PackageCode: packageCode || undefined,
         PackerByName: getStringValue(backendRecord.PackerByName, '-'),
-        PackingDate: getStringValue(backendRecord.PackingDate, new Date().toISOString()),
+        PackingDate: getStringValue(backendRecord.PackingDate),
+        ShippingUnitId: getStringValue(backendRecord.ShippingUnitId),
         ShippingUnitName: getStringValue(backendRecord.ShippingUnitName, '-'),
         TotalRows: getNumberValue(backendRecord.TotalRows),
     }
@@ -262,11 +224,13 @@ function normalizePackingListResponse(
     const data = unwrapApiData(response)
 
     if (Array.isArray(data)) {
+        const records = data
+            .map(normalizePackingRecord)
+            .filter((record): record is IPackingRecord => record !== null)
+
         return {
-            Data: data
-                .map(normalizePackingRecord)
-                .filter((record): record is IPackingRecord => record !== null),
-            TotalRows: data.length,
+            Data: records,
+            TotalRows: records.length,
             PageIndex: fallbackRequest.PageIndex,
             PageSize: fallbackRequest.PageSize,
         }
@@ -291,7 +255,9 @@ function normalizePackingListResponse(
             TotalRows:
                 typeof data.Total === 'number'
                     ? data.Total
-                    : records.length,
+                    : typeof data.TotalRows === 'number'
+                      ? data.TotalRows
+                      : records.length,
             PageIndex:
                 typeof data.PageIndex === 'number'
                     ? data.PageIndex
@@ -313,7 +279,9 @@ function normalizePackingListResponse(
             TotalRows:
                 typeof data.TotalRows === 'number'
                     ? data.TotalRows
-                    : records.length,
+                    : typeof data.Total === 'number'
+                      ? data.Total
+                      : records.length,
             PageIndex:
                 typeof data.PageIndex === 'number'
                     ? data.PageIndex
@@ -422,14 +390,7 @@ export const packingService = {
             query: { ...request },
         })
 
-        const result = normalizePackingListResponse(response, request)
-        const filteredData = filterPackingRecordsByDate(result.Data, request.Date)
-
-        return {
-            ...result,
-            Data: filteredData,
-            TotalRows: request.Date ? filteredData.length : result.TotalRows,
-        }
+        return normalizePackingListResponse(response, request)
     },
 
     async getPackingStats(request: IGetPackingStatsRequest = {}): Promise<IPackingStats> {

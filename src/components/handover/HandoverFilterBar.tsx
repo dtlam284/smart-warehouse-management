@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Button, Input } from '@/components/ui'
 import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
 import { useAppDispatch, useAppSelector } from '@/store'
-import { selectScanInputType, selectSelectedShippingProviderId } from '@/store/selectors/appSelectors'
+import { selectScanInputType } from '@/store/selectors/appSelectors'
 import { selectHandoverFilters } from '@/store/selectors/handoverSelectors'
 import { selectShippingProviders } from '@/store/selectors/warehouseSelectors'
 import {
@@ -22,15 +22,18 @@ function shouldUseShippingProvider(scanInputType: ScanInputType): boolean {
     return scanInputType !== 'DELIVERYCODE'
 }
 
-function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IHandoverFilters> {
-    const normalizedCode = code.trim()
-
-    const emptyCodeFilter: Partial<IHandoverFilters> = {
+function buildEmptyCodeFilter(): Partial<IHandoverFilters> {
+    return {
         DeliveryCode: undefined,
         OrderCode: undefined,
         OrderCodeRef: undefined,
         PackageCode: undefined,
     }
+}
+
+function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IHandoverFilters> {
+    const normalizedCode = code.trim()
+    const emptyCodeFilter = buildEmptyCodeFilter()
 
     if (!normalizedCode) {
         return emptyCodeFilter
@@ -103,6 +106,13 @@ function getInitialCodeByType(filters: IHandoverFilters): CodeByType {
         ORDERCODEREF: filters.OrderCodeRef ?? '',
     }
 }
+
+function buildBaseResetFilters(pageSize: number): IHandoverFilters {
+    return {
+        PageIndex: 1,
+        PageSize: pageSize || 10,
+    }
+}
 //#endregion helpers
 
 //#region component
@@ -112,17 +122,14 @@ export function HandoverFilterBar() {
     const filters = useAppSelector(selectHandoverFilters)
     const providers = useAppSelector(selectShippingProviders)
     const scanInputType = useAppSelector(selectScanInputType)
-    const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
     const [date, setDate] = React.useState(filters.Date ?? '')
     const [codeByType, setCodeByType] = React.useState<CodeByType>(() =>
         getInitialCodeByType(filters),
     )
+    const [shippingUnitId, setShippingUnitId] = React.useState(filters.ShippingUnitId ?? '')
 
     const shouldShowShippingProvider = shouldUseShippingProvider(scanInputType)
-    const effectiveShippingUnitId = shouldShowShippingProvider
-        ? selectedShippingProviderId || filters.ShippingUnitId || ''
-        : ''
     const currentCode = codeByType[scanInputType] ?? ''
 
     const handleCodeChange = (value: string) => {
@@ -132,11 +139,11 @@ export function HandoverFilterBar() {
         }))
     }
 
-    const buildFilters = (shippingUnitId = effectiveShippingUnitId): IHandoverFilters => ({
+    const buildFilters = (): IHandoverFilters => ({
         ...filters,
         ...buildCodeFilter(scanInputType, currentCode),
         PageIndex: 1,
-        PageSize: filters.PageSize,
+        PageSize: filters.PageSize || 10,
         Date: date.trim() || undefined,
         ShippingUnitId: shouldShowShippingProvider ? shippingUnitId || undefined : undefined,
     })
@@ -148,24 +155,12 @@ export function HandoverFilterBar() {
         void dispatch(fetchHandoverList(nextFilters))
     }
 
-    const handleShippingUnitChange = (provider: { Id: string; Name: string }) => {
-        const nextFilters = buildFilters(provider.Id)
-
-        dispatch(setHandoverFilters(nextFilters))
-        void dispatch(fetchHandoverList(nextFilters))
-    }
-
     const handleResetFilters = () => {
-        const resetFilters: IHandoverFilters = {
-            PageIndex: 1,
-            PageSize: filters.PageSize || 10,
-            ShippingUnitId: shouldShowShippingProvider
-                ? selectedShippingProviderId || undefined
-                : undefined,
-        }
+        const resetFilters = buildBaseResetFilters(filters.PageSize)
 
         setDate('')
         setCodeByType({})
+        setShippingUnitId('')
 
         dispatch(resetHandoverFilters())
         dispatch(setHandoverFilters(resetFilters))
@@ -176,7 +171,7 @@ export function HandoverFilterBar() {
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <h2 className="text-sm font-black uppercase tracking-wider text-slate-400">
                     Bộ lọc bàn giao
                 </h2>
             </div>
@@ -185,7 +180,7 @@ export function HandoverFilterBar() {
                 className={
                     shouldShowShippingProvider
                         ? 'grid items-end gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]'
-                        : 'grid gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
+                        : 'grid items-end gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
                 }
             >
                 <Input
@@ -195,14 +190,14 @@ export function HandoverFilterBar() {
                     onChange={(event) => setDate(event.target.value)}
                 />
 
-                <div key={`code-filter-${scanInputType}`}>
-                    <Input
-                        label={getCodeFilterLabel(scanInputType)}
-                        placeholder={getCodeFilterPlaceholder(scanInputType)}
-                        value={currentCode}
-                        onChange={(event) => handleCodeChange(event.target.value)}
-                    />
-                </div>
+                <Input
+                    key={`handover-code-filter-${scanInputType}`}
+                    label={getCodeFilterLabel(scanInputType)}
+                    placeholder={getCodeFilterPlaceholder(scanInputType)}
+                    value={currentCode}
+                    onChange={(event) => handleCodeChange(event.target.value)}
+                />
+
                 {shouldShowShippingProvider ? (
                     <div className="flex flex-col gap-2">
                         <label className="text-base font-bold leading-6 text-slate-700">
@@ -211,17 +206,17 @@ export function HandoverFilterBar() {
 
                         <ShippingProviderSelect
                             providers={providers}
-                            value={effectiveShippingUnitId}
-                            onChange={handleShippingUnitChange}
+                            value={shippingUnitId}
+                            onChange={(provider) => setShippingUnitId(provider.Id)}
                         />
                     </div>
                 ) : null}
 
-                <div className="flex items-end">
+                <div className="flex">
                     <Button onClick={handleApplyFilters}>Lọc</Button>
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex">
                     <Button variant="secondary" onClick={handleResetFilters}>
                         Đặt lại
                     </Button>

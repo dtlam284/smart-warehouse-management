@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Button, Input } from '@/components/ui'
 import { ShippingProviderSelect } from '@/components/shared/ShippingProviderSelect'
 import { useAppDispatch, useAppSelector } from '@/store'
-import { selectScanInputType, selectSelectedShippingProviderId } from '@/store/selectors/appSelectors'
+import { selectScanInputType } from '@/store/selectors/appSelectors'
 import { selectPackingFilters } from '@/store/selectors/packingSelectors'
 import { selectShippingProviders } from '@/store/selectors/warehouseSelectors'
 import { fetchPackingList, resetPackingFilters, setPackingFilters } from '@/store/slices/packingSlice'
@@ -18,15 +18,18 @@ function shouldUseShippingProvider(scanInputType: ScanInputType): boolean {
     return scanInputType !== 'DELIVERYCODE'
 }
 
-function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IPackingFilters> {
-    const normalizedCode = code.trim()
-
-    const emptyCodeFilter: Partial<IPackingFilters> = {
+function buildEmptyCodeFilter(): Partial<IPackingFilters> {
+    return {
         DeliveryCode: undefined,
         OrderCode: undefined,
         OrderCodeRef: undefined,
         PackageCode: undefined,
     }
+}
+
+function buildCodeFilter(scanInputType: ScanInputType, code: string): Partial<IPackingFilters> {
+    const normalizedCode = code.trim()
+    const emptyCodeFilter = buildEmptyCodeFilter()
 
     if (!normalizedCode) {
         return emptyCodeFilter
@@ -99,6 +102,13 @@ function getInitialCodeByType(filters: IPackingFilters): CodeByType {
         ORDERCODEREF: filters.OrderCodeRef ?? '',
     }
 }
+
+function buildBaseResetFilters(pageSize: number): IPackingFilters {
+    return {
+        PageIndex: 1,
+        PageSize: pageSize || 10,
+    }
+}
 //#endregion helpers
 
 //#region component
@@ -108,20 +118,14 @@ export function PackingFilterBar() {
     const filters = useAppSelector(selectPackingFilters)
     const providers = useAppSelector(selectShippingProviders)
     const scanInputType = useAppSelector(selectScanInputType)
-    const selectedShippingProviderId = useAppSelector(selectSelectedShippingProviderId)
 
     const [date, setDate] = React.useState(filters.Date ?? '')
     const [codeByType, setCodeByType] = React.useState<CodeByType>(() =>
         getInitialCodeByType(filters),
     )
-    const [localShippingUnitId, setLocalShippingUnitId] = React.useState(
-        filters.ShippingUnitId ?? '',
-    )
+    const [shippingUnitId, setShippingUnitId] = React.useState(filters.ShippingUnitId ?? '')
 
     const shouldShowShippingProvider = shouldUseShippingProvider(scanInputType)
-    const effectiveShippingUnitId = shouldShowShippingProvider
-        ? selectedShippingProviderId || localShippingUnitId || filters.ShippingUnitId || ''
-        : ''
     const currentCode = codeByType[scanInputType] ?? ''
 
     const handleCodeChange = (value: string) => {
@@ -131,11 +135,11 @@ export function PackingFilterBar() {
         }))
     }
 
-    const buildFilters = (shippingUnitId = effectiveShippingUnitId): IPackingFilters => ({
+    const buildFilters = (): IPackingFilters => ({
         ...filters,
         ...buildCodeFilter(scanInputType, currentCode),
         PageIndex: 1,
-        PageSize: filters.PageSize,
+        PageSize: filters.PageSize || 10,
         Date: date.trim() || undefined,
         ShippingUnitId: shouldShowShippingProvider ? shippingUnitId || undefined : undefined,
     })
@@ -147,27 +151,12 @@ export function PackingFilterBar() {
         void dispatch(fetchPackingList(nextFilters))
     }
 
-    const handleShippingUnitChange = (provider: { Id: string; Name: string }) => {
-        setLocalShippingUnitId(provider.Id)
-
-        const nextFilters = buildFilters(provider.Id)
-
-        dispatch(setPackingFilters(nextFilters))
-        void dispatch(fetchPackingList(nextFilters))
-    }
-
     const handleResetFilters = () => {
-        const resetFilters: IPackingFilters = {
-            PageIndex: 1,
-            PageSize: filters.PageSize || 10,
-            ShippingUnitId: shouldShowShippingProvider
-                ? selectedShippingProviderId || undefined
-                : undefined,
-        }
+        const resetFilters = buildBaseResetFilters(filters.PageSize)
 
         setDate('')
         setCodeByType({})
-        setLocalShippingUnitId('')
+        setShippingUnitId('')
 
         dispatch(resetPackingFilters())
         dispatch(setPackingFilters(resetFilters))
@@ -178,7 +167,7 @@ export function PackingFilterBar() {
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <h2 className="text-sm font-black uppercase tracking-wider text-slate-400">
                     Bộ lọc đóng gói
                 </h2>
             </div>
@@ -187,7 +176,7 @@ export function PackingFilterBar() {
                 className={
                     shouldShowShippingProvider
                         ? 'grid items-end gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]'
-                        : 'grid gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
+                        : 'grid items-end gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
                 }
             >
                 <Input
@@ -197,14 +186,13 @@ export function PackingFilterBar() {
                     onChange={(event) => setDate(event.target.value)}
                 />
 
-                <div key={`packing-code-filter-${scanInputType}`}>
-                    <Input
-                        label={getCodeFilterLabel(scanInputType)}
-                        placeholder={getCodeFilterPlaceholder(scanInputType)}
-                        value={currentCode}
-                        onChange={(event) => handleCodeChange(event.target.value)}
-                    />
-                </div>
+                <Input
+                    key={`packing-code-filter-${scanInputType}`}
+                    label={getCodeFilterLabel(scanInputType)}
+                    placeholder={getCodeFilterPlaceholder(scanInputType)}
+                    value={currentCode}
+                    onChange={(event) => handleCodeChange(event.target.value)}
+                />
 
                 {shouldShowShippingProvider ? (
                     <div className="flex flex-col gap-2">
@@ -214,8 +202,8 @@ export function PackingFilterBar() {
 
                         <ShippingProviderSelect
                             providers={providers}
-                            value={effectiveShippingUnitId}
-                            onChange={handleShippingUnitChange}
+                            value={shippingUnitId}
+                            onChange={(provider) => setShippingUnitId(provider.Id)}
                         />
                     </div>
                 ) : null}
