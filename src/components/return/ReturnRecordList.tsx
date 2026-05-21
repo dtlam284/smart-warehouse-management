@@ -120,7 +120,7 @@ export function ReturnRecordList() {
             ) : null}
 
             {!isBusy && records.length === 0 ? (
-                <p className="py-8 text-center text-sm text-slate-500">
+                <p className="py-10 text-center text-base font-semibold text-slate-500">
                     Chưa có đơn / kiện hoàn nào được xác nhận
                 </p>
             ) : null}

@@ -68,7 +68,18 @@ function getScannerPlaceholder(
     return placeholderByType[scanInputType]
 }
 
-function shouldRequireShippingProvider(scanInputType: ScanInputType): boolean {
+function shouldRequireShippingProvider(
+    workMode: WorkMode,
+    scanInputType: ScanInputType,
+): boolean {
+    if (workMode === 'PACKING') {
+        return false
+    }
+
+    if (workMode === 'NONE') {
+        return false
+    }
+
     return scanInputType === 'DELIVERYCODE'
 }
 
@@ -179,7 +190,7 @@ export function WorkplacePage() {
     const { handleScan } = useScanProcessor()
     const [focusSignal, setFocusSignal] = React.useState(0)
 
-    const shouldShowShippingProvider = shouldRequireShippingProvider(scanInputType)
+    const shouldShowShippingProvider = shouldRequireShippingProvider(workMode, scanInputType)
     const isWorkflowBlocked = shouldShowShippingProvider && !selectedShippingProviderId
     const scannerPlaceholder = getScannerPlaceholder(workMode, scanInputType, isRemoveMode)
     const returnPageSize = returnFilters.PageSize
@@ -201,45 +212,6 @@ export function WorkplacePage() {
     const handleShippingProviderChange = (provider: Pick<IShippingProvider, 'Id' | 'Name'>) => {
         dispatch(setShippingProvider(provider))
         focusScanner()
-
-        if (!provider.Id) {
-            return
-        }
-
-        if (workMode === 'HANDOVER') {
-            void dispatch(
-                fetchHandoverList({
-                    PageIndex: 1,
-                    PageSize: 10,
-                    ShippingUnitId: provider.Id,
-                }),
-            )
-
-            void dispatch(loadHandoverStats({}))
-            return
-        }
-
-        if (workMode === 'RETURN_DELIVERY') {
-            const nextFilters = {
-                ...returnFilters,
-                PageIndex: 1,
-                ShippingUnitId: provider.Id,
-            }
-
-            dispatch(setReturnFilters(nextFilters))
-            void dispatch(fetchReturnList(nextFilters))
-            void dispatch(loadReturnStats({}))
-        }
-
-        if (workMode === 'PACKING') {
-            void dispatch(
-                fetchPackingList({
-                    PageIndex: 1,
-                    PageSize: 10,
-                    ShippingUnitId: provider.Id,
-                }),
-            )
-        }
     }
 
     const handleToggleRemoveMode = () => {
@@ -267,7 +239,7 @@ export function WorkplacePage() {
     }, [dispatch, providers, selectedShippingProviderId])
 
     React.useEffect(() => {
-        if (workMode !== 'PACKING' || isWorkflowBlocked) {
+        if (workMode !== 'PACKING') {
             return
         }
 
@@ -275,14 +247,11 @@ export function WorkplacePage() {
             fetchPackingList({
                 PageIndex: 1,
                 PageSize: 10,
-                ShippingUnitId: shouldShowShippingProvider
-                    ? selectedShippingProviderId || undefined
-                    : undefined,
             }),
         )
 
         void dispatch(loadPackingStats({}))
-    }, [dispatch, isWorkflowBlocked, selectedShippingProviderId, shouldShowShippingProvider, workMode])
+    }, [dispatch, workMode])
 
     React.useEffect(() => {
         if (workMode !== 'HANDOVER' || isWorkflowBlocked) {
@@ -295,12 +264,9 @@ export function WorkplacePage() {
             fetchHandoverList({
                 PageIndex: 1,
                 PageSize: 10,
-                ShippingUnitId: shouldShowShippingProvider
-                    ? selectedShippingProviderId || undefined
-                    : undefined,
             }),
         )
-    }, [dispatch, isWorkflowBlocked, selectedShippingProviderId, shouldShowShippingProvider, workMode])
+    }, [dispatch, isWorkflowBlocked, workMode])
 
     React.useEffect(() => {
         if (workMode !== 'RETURN_DELIVERY' || isWorkflowBlocked) {
@@ -310,22 +276,12 @@ export function WorkplacePage() {
         const nextFilters = {
             PageIndex: 1,
             PageSize: returnPageSize ?? 10,
-            ShippingUnitId: shouldShowShippingProvider
-                ? selectedShippingProviderId || undefined
-                : undefined,
         }
 
         dispatch(setReturnFilters(nextFilters))
         void dispatch(loadReturnStats({}))
         void dispatch(fetchReturnList(nextFilters))
-    }, [
-        dispatch,
-        isWorkflowBlocked,
-        returnPageSize,
-        selectedShippingProviderId,
-        shouldShowShippingProvider,
-        workMode,
-    ])
+    }, [dispatch, isWorkflowBlocked, returnPageSize, workMode])
     //#endregion effects
 
     //#region render

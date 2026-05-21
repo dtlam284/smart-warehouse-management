@@ -18,10 +18,6 @@ type CodeByType = Partial<Record<ScanInputType, string>>
 //#endregion types
 
 //#region helpers
-function shouldUseShippingProvider(scanInputType: ScanInputType): boolean {
-    return scanInputType !== 'DELIVERYCODE'
-}
-
 function buildEmptyCodeFilter(): Partial<IHandoverFilters> {
     return {
         DeliveryCode: undefined,
@@ -129,7 +125,6 @@ export function HandoverFilterBar() {
     )
     const [shippingUnitId, setShippingUnitId] = React.useState(filters.ShippingUnitId ?? '')
 
-    const shouldShowShippingProvider = shouldUseShippingProvider(scanInputType)
     const currentCode = codeByType[scanInputType] ?? ''
 
     const handleCodeChange = (value: string) => {
@@ -145,7 +140,7 @@ export function HandoverFilterBar() {
         PageIndex: 1,
         PageSize: filters.PageSize || 10,
         Date: date.trim() || undefined,
-        ShippingUnitId: shouldShowShippingProvider ? shippingUnitId || undefined : undefined,
+        ShippingUnitId: shippingUnitId || undefined,
     })
 
     const handleApplyFilters = () => {
@@ -176,13 +171,7 @@ export function HandoverFilterBar() {
                 </h2>
             </div>
 
-            <div
-                className={
-                    shouldShowShippingProvider
-                        ? 'grid items-end gap-3 lg:grid-cols-[180px_1fr_240px_auto_auto]'
-                        : 'grid items-end gap-3 lg:grid-cols-[180px_1fr_auto_auto]'
-                }
-            >
+            <div className="grid items-end gap-3 xl:grid-cols-[170px_1fr_240px_auto_auto]">
                 <Input
                     type="date"
                     label="Ngày"
@@ -198,19 +187,17 @@ export function HandoverFilterBar() {
                     onChange={(event) => handleCodeChange(event.target.value)}
                 />
 
-                {shouldShowShippingProvider ? (
-                    <div className="flex flex-col gap-2">
-                        <label className="text-base font-bold leading-6 text-slate-700">
-                            Đơn vị vận chuyển
-                        </label>
+                <div className="flex flex-col gap-2">
+                    <label className="text-base font-bold leading-6 text-slate-700">
+                        Đơn vị vận chuyển
+                    </label>
 
-                        <ShippingProviderSelect
-                            providers={providers}
-                            value={shippingUnitId}
-                            onChange={(provider) => setShippingUnitId(provider.Id)}
-                        />
-                    </div>
-                ) : null}
+                    <ShippingProviderSelect
+                        providers={providers}
+                        value={shippingUnitId}
+                        onChange={(provider) => setShippingUnitId(provider.Id)}
+                    />
+                </div>
 
                 <div className="flex">
                     <Button onClick={handleApplyFilters}>Lọc</Button>
