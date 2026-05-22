@@ -148,12 +148,12 @@ export function TenantSelectionScreen() {
                     </div>
 
                     <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                        Select Tenant
+                        Chọn tổ chức
                     </h1>
 
-                    {/* <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        Choose the tenant workspace you want to access.
-                    </p> */}
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                        Chọn một tổ chức mà bạn muốn truy cập.
+                    </p>
                 </div>
                 {/*#endregion header */}
 
@@ -171,7 +171,7 @@ export function TenantSelectionScreen() {
                                 onClick={handleRetry}
                             >
                                 <RefreshCw className="h-4 w-4" />
-                                Retry
+                                Thử lại
                             </Button>
                         </div>
                     </div>
@@ -207,7 +207,7 @@ export function TenantSelectionScreen() {
                             void handleBackToLogin()
                         }}
                     >
-                        Back to login
+                        Quay lại
                     </Button>
                 </div>
                 {/*#endregion content */}
@@ -262,11 +262,11 @@ function TenantCard({ tenant, disabled, onSelect }: ITenantCardProps) {
 
                         {tenant.isActive === false ? (
                             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                                Inactive
+                                Không hoạt động
                             </span>
                         ) : (
                             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                                Active
+                                Hoạt động
                             </span>
                         )}
                     </div>

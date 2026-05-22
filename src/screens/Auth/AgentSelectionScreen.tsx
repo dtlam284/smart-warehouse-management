@@ -138,11 +138,11 @@ export function AgentSelectionScreen() {
                     </div>
 
                     <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                        Select Agent
+                        Chọn kho
                     </h1>
 
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        Choose the agent workspace you want to access for{' '}
+                        Chọn kho mà bạn muốn truy cập cho{' '}
                         <span className="font-medium text-slate-900 dark:text-slate-100">
                             {selectedTenant.name}
                         </span>
@@ -170,7 +170,7 @@ export function AgentSelectionScreen() {
                                 onClick={handleRetry}
                             >
                                 <RefreshCw className="h-4 w-4" />
-                                Retry
+                                Thử lại
                             </Button>
                         </div>
                     </div>
@@ -208,7 +208,7 @@ export function AgentSelectionScreen() {
                             navigate('/auth/select-role', { replace: true })
                         }}
                     >
-                        Back to function selection
+                        Quay lại
                     </Button>
                 </div>
             </div>

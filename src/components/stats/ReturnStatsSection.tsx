@@ -75,21 +75,21 @@ export function ReturnStatsSection() {
                 />
 
                 <StatsCard
-                    title="Full"
+                    title="Hoàn toàn bộ"
                     value={fullReturn}
                     // subtitle="hoàn toàn bộ"
                     loading={isLoading}
                 />
 
                 <StatsCard
-                    title="Partial"
+                    title="Hoàn một phần"
                     value={partialReturn}
                     // subtitle="hoàn một phần"
                     loading={isLoading}
                 />
 
                 <StatsCard
-                    title="Defective"
+                    title="Hàng lỗi"
                     value={defectiveReturn}
                     // subtitle="hàng lỗi"
                     loading={isLoading}

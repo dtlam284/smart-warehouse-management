@@ -111,7 +111,7 @@ export function PackingActivePanel() {
                 </h2>
 
                 <span className="rounded bg-blue-50 px-3 py-1 font-mono text-sm font-black text-blue-700">
-                    PACKING
+                    ĐÓNG GÓI
                 </span>
             </div>
 
@@ -184,7 +184,7 @@ export function PackingActivePanel() {
                             disabled={isUpdating}
                             onClick={handleCompletePacking}
                         >
-                            ✓ Hoàn thành đóng gói
+                            Hoàn thành đóng gói
                         </Button>
 
                         <Button
@@ -198,7 +198,7 @@ export function PackingActivePanel() {
                     </div>
 
                     <p className="text-center text-sm font-semibold text-slate-400">
-                        Quét barcode SKU bằng máy quét để đếm. Hoàn thành khi tất cả đủ số lượng.
+                        Quét mã SKU bằng máy quét để đếm. Hoàn thành khi tất cả đủ số lượng.
                     </p>
                 </div>
             ) : null}

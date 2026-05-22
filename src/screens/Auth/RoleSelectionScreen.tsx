@@ -33,38 +33,38 @@ const ROLE_OPTIONS: Array<{
 }> = [
     {
         value: FunctionalPathEnum.MANAGER,
-        title: 'Manager',
-        description: 'Manage tenant operations, reports, users, and high-level workflows.',
-        badge: 'Admin function',
+        title: 'Quản lý',
+        description: 'Quản lý các hoạt động của tổ chức, báo cáo, người dùng và quy trình làm việc.',
+        badge: 'Chức năng quản trị',
         icon: UsersRound,
     },
     {
         value: FunctionalPathEnum.DISTRIBUTOR,
-        title: 'Distributor',
+        title: 'Kho hàng',
         description:
-            'Work with distributor/workgroup-level operations. This requires agent selection.',
-        badge: 'Requires agent',
+            'Làm việc với các hoạt động ở cấp kho hàng/nhóm làm việc.',
+        badge: 'Cần chọn đại lý',
         icon: Truck,
     },
     {
         value: FunctionalPathEnum.AFFILIATE,
-        title: 'Affiliate System',
-        description: 'Access affiliate system workflows and related operational tools.',
-        badge: 'Affiliate',
+        title: 'Hệ thống tiếp thị liên kết',
+        description: 'Truy cập quy trình làm việc của hệ thống tiếp thị liên kết.',
+        badge: 'Tiếp thị liên kết',
         icon: Network,
     },
     {
         value: FunctionalPathEnum.POS,
-        title: 'POS',
-        description: 'Access point-of-sale workflows and store-facing operations.',
-        badge: 'POS',
+        title: 'Điểm bán hàng',
+        description: 'Truy cập quy trình bán hàng và hoạt động tại cửa hàng.',
+        badge: 'Điểm bán hàng',
         icon: Store,
     },
     {
         value: FunctionalPathEnum.COLLABORATOR,
-        title: 'Collaborator',
-        description: 'Access collaborator workflows and assigned operational tasks.',
-        badge: 'Collaborator',
+        title: 'Cộng tác viên',
+        description: 'Truy cập quy trình làm việc của cộng tác viên.',
+        badge: 'Cộng tác viên',
         icon: Handshake,
     },
 ]
@@ -152,11 +152,11 @@ export function RoleSelectionScreen() {
                     </div>
 
                     <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                        Select Function
+                        Chọn chức năng
                     </h1>
 
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        Choose which function you want to use for{' '}
+                        Chọn một chức năng mà bạn muốn sử dụng cho{' '}
                         <span className="font-medium text-slate-900 dark:text-slate-100">
                             {selectedTenant.name}
                         </span>
@@ -224,7 +224,7 @@ export function RoleSelectionScreen() {
                             })
                         }}
                     >
-                        Back to tenant selection
+                        Quay lại
                     </Button>
                 </div>
                 {/*#endregion footer */}
@@ -275,7 +275,7 @@ function RoleCard({
 
                         {requiresAgent ? (
                             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                                Agent flow
+                                Luồng hoạt động kho
                             </span>
                         ) : null}
                     </div>
