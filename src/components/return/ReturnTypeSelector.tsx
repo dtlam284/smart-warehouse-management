@@ -20,19 +20,19 @@ const returnTypeOptions: IReturnTypeOption[] = [
     {
         type: 'FULL_RETURN',
         icon: '✅',
-        title: 'Full Return',
+        title: 'Hoàn toàn bộ',
         description: 'Toàn bộ đạt',
     },
     {
         type: 'DEFECTIVE_RETURN',
         icon: '❌',
-        title: 'Defective',
+        title: 'Hàng lỗi',
         description: 'Toàn bộ lỗi',
     },
     {
         type: 'PARTIAL_RETURN',
         icon: '⚠️',
-        title: 'Partial',
+        title: 'Hoàn một phần',
         description: 'Một phần',
     },
 ]
@@ -47,7 +47,7 @@ const activeClassByType: Record<ReturnType, string> = {
 //#region component
 export function ReturnTypeSelector({ value, onChange }: IReturnTypeSelectorProps) {
     return (
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
             {returnTypeOptions.map((option) => {
                 const isActive = value === option.type
 
@@ -57,20 +57,22 @@ export function ReturnTypeSelector({ value, onChange }: IReturnTypeSelectorProps
                         type="button"
                         onClick={() => onChange(option.type)}
                         className={cn(
-                            'rounded-lg border-2 border-slate-200 bg-slate-50 px-3 py-3 text-center transition-colors hover:border-slate-300 hover:bg-white',
+                            'min-h-[132px] rounded-xl border-2 border-slate-200 bg-slate-50 px-5 py-5 text-center transition-colors hover:border-slate-300 hover:bg-white',
                             isActive && activeClassByType[option.type],
                         )}
                     >
-                        <span className="block text-xl">{option.icon}</span>
+                        <span className="block text-4xl leading-none">
+                            {option.icon}
+                        </span>
 
-                        <span className="mt-1 block text-xs font-bold">
+                        <span className="mt-3 block text-base font-black">
                             {option.title}
                         </span>
 
                         <span
                             className={cn(
-                                'mt-0.5 block text-xs',
-                                isActive ? 'text-current/70' : 'text-slate-400',
+                                'mt-1 block text-sm font-semibold',
+                                isActive ? 'text-current/75' : 'text-slate-500',
                             )}
                         >
                             {option.description}

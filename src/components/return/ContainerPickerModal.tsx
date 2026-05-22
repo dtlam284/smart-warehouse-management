@@ -122,7 +122,7 @@ export function ContainerPickerModal({
         const normalizedCode = code.trim().toUpperCase()
 
         if (!normalizedCode) {
-            notifyWarning('Vui lòng quét barcode container')
+            notifyWarning('Vui lòng quét mã đơn vị chứa')
             return
         }
 
@@ -136,14 +136,14 @@ export function ContainerPickerModal({
             const nextWarehouseItemId = getWarehouseItemId(normalizedContainer)
 
             if (!nextWarehouseItemId) {
-                notifyError('Container không có WareHouseItemId, không thể xác nhận hàng hoàn')
+                notifyError('Đơn vị chứa không có ID đơn vị kho, không thể xác nhận hàng hoàn')
                 return
             }
 
             setContainer(normalizedContainer)
             setContainerCode(normalizedContainer.Code || normalizedCode)
         } catch (lookupError) {
-            notifyError(getErrorMessage(lookupError, 'Không tìm thấy thông tin thùng chứa'))
+            notifyError(getErrorMessage(lookupError, 'Không tìm thấy thông tin đơn vị chứa'))
         } finally {
             setIsLookingUp(false)
         }
@@ -212,13 +212,13 @@ export function ContainerPickerModal({
             <div className="space-y-5">
                 <div>
                     <label className="mb-2 block text-base font-black text-slate-700">
-                        Barcode container
+                        Mã đơn vị chứa
                     </label>
 
                     <ScannerInput
                         autoFocus
                         disabled={isBusy}
-                        placeholder="Quét barcode container..."
+                        placeholder="Quét mã đơn vị chứa..."
                         onScan={handleContainerScan}
                     />
 
@@ -266,7 +266,7 @@ export function ContainerPickerModal({
 
                             <div>
                                 <div className="text-sm font-black uppercase text-emerald-500">
-                                    WareHouseItemId
+                                    ID đơn vị kho
                                 </div>
                                 <div className="break-all font-mono text-sm font-black text-emerald-900">
                                     {getWarehouseItemId(container) || '-'}
@@ -293,7 +293,7 @@ export function ContainerPickerModal({
 
                             <div>
                                 <div className="text-sm font-black uppercase text-emerald-500">
-                                    Usage
+                                    Mục đích sử dụng
                                 </div>
                                 <div className="font-black text-emerald-900">
                                     {container.Usage || '-'}

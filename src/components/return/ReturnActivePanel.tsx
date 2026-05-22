@@ -15,10 +15,7 @@ import {
 } from '@/store/slices/returnSlice'
 import { showNotification } from '@/store/slices/notificationSlice'
 import { getDefaultQuantities, validateReturnQuantity } from '@/validations/returnValidation'
-import {
-    ContainerPickerModal,
-    IReturnContainerValue,
-} from './ContainerPickerModal'
+import { ContainerPickerModal, IReturnContainerValue } from './ContainerPickerModal'
 import { ReturnEmptyPanel } from './ReturnEmptyPanel'
 import { ReturnTypeSelector } from './ReturnTypeSelector'
 import type {
@@ -73,6 +70,17 @@ function getErrorMessage(error: unknown, fallback: string): string {
     }
 
     return fallback
+}
+
+function isOrderAlreadyProcessedMessage(message: string): boolean {
+    const normalizedMessage = message.trim().toLowerCase()
+
+    return (
+        normalizedMessage.includes('đơn hàng đã xử lý') ||
+        normalizedMessage.includes('không thể thay đổi') ||
+        normalizedMessage.includes('order has been processed') ||
+        normalizedMessage.includes('cannot be changed')
+    )
 }
 
 function buildInitialQuantities(activeReturn: IReturnDetail): ReturnQuantityMap {
@@ -446,36 +454,45 @@ function ReturnForm({
             .unwrap()
             .then(() => {
                 notifySuccess('Xác nhận hoàn trả thành công')
+                dispatch(clearActiveReturn())
             })
             .catch((error) => {
                 notifyError(getErrorMessage(error, 'Không thể xác nhận hoàn trả'))
             })
     }
 
-    const handleContainerConfirm = (container: IReturnContainerValue) => {
+    const handleContainerConfirm = async (container: IReturnContainerValue) => {
         if (!pendingRequest) {
+            notifyError('Không tìm thấy yêu cầu hoàn trả đang chờ xử lý')
             return
         }
 
-        void dispatch(
-            confirmReturn({
-                ...pendingRequest,
-                ContainerId: container.ContainerId,
-                WarehouseItemId: container.WarehouseItemId,
-                WareHouseItemId: container.WarehouseItemId,
-                ContainerCode: container.ContainerCode,
-                Container: container.Container,
-            }),
-        )
-            .unwrap()
-            .then(() => {
-                notifySuccess('Xác nhận hoàn trả thành công')
+        try {
+            await dispatch(
+                confirmReturn({
+                    ...pendingRequest,
+                    ContainerId: container.ContainerId,
+                    ContainerCode: container.ContainerCode,
+                    WarehouseItemId: container.WarehouseItemId,
+                    WareHouseItemId: container.WareHouseItemId,
+                    Container: container.Container,
+                }),
+            ).unwrap()
+
+            notifySuccess('Xác nhận hoàn trả thành công')
+            setContainerModalOpen(false)
+            setPendingRequest(null)
+            dispatch(clearActiveReturn())
+        } catch (error) {
+            const message = getErrorMessage(error, 'Không thể xác nhận hoàn trả')
+
+            notifyError(message)
+
+            if (isOrderAlreadyProcessedMessage(message)) {
                 setContainerModalOpen(false)
                 setPendingRequest(null)
-            })
-            .catch((error) => {
-                notifyError(getErrorMessage(error, 'Không thể xác nhận hoàn trả'))
-            })
+            }
+        }
     }
 
     return (
@@ -569,7 +586,7 @@ function ReturnForm({
                         disabled={isConfirming}
                         onClick={handleSubmit}
                     >
-                        ✓ Xác nhận hoàn trả
+                        Xác nhận hoàn trả
                     </Button>
 
                     <Button
@@ -581,12 +598,6 @@ function ReturnForm({
                         Bỏ qua
                     </Button>
                 </div>
-
-                {/* <p className="text-center text-sm font-semibold text-slate-400">
-                    {hasLayout
-                        ? 'Kho có layout: cần quét đơn vị chứa trước khi xác nhận.'
-                        : 'Kho không có layout: xác nhận trực tiếp, không cần container.'}
-                </p> */}
             </div>
 
             <ContainerPickerModal
@@ -595,6 +606,7 @@ function ReturnForm({
                 onClose={() => {
                     if (!isConfirming) {
                         setContainerModalOpen(false)
+                        setPendingRequest(null)
                     }
                 }}
                 onConfirm={handleContainerConfirm}
@@ -608,9 +620,23 @@ function ReturnForm({
 export function ReturnActivePanel() {
     const activeReturn = useAppSelector(selectActiveReturn)
     const activeScanPayload = useAppSelector(selectActiveReturnScanPayload)
-    const isLoadingDetail = useAppSelector(selectIsLoadingReturnDetail)
+    const isLoading = useAppSelector(selectIsLoadingReturnDetail)
     const isConfirming = useAppSelector(selectIsConfirmingReturn)
     const hasLayout = useAppSelector(selectWarehouseHasLayout)
+
+    if (isLoading) {
+        return (
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex min-h-[220px] items-center justify-center">
+                    <Spinner />
+                </div>
+            </section>
+        )
+    }
+
+    if (!activeReturn) {
+        return <ReturnEmptyPanel />
+    }
 
     return (
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -619,35 +645,17 @@ export function ReturnActivePanel() {
                     Đơn hàng hoàn trả
                 </h2>
 
-                <span className="rounded bg-purple-50 px-3 py-1 font-mono text-sm font-black text-purple-700">
-                    RETURN
+                <span className="rounded-md bg-purple-50 px-3 py-1 text-xs font-black uppercase text-purple-700">
+                    HOÀN TRẢ
                 </span>
             </div>
 
-            {isLoadingDetail ? (
-                <div className="flex items-center justify-center gap-2 py-14 text-base font-semibold text-slate-500">
-                    <Spinner size="sm" />
-                    Đang tải thông tin đơn hoàn...
-                </div>
-            ) : null}
-
-            {!isLoadingDetail && !activeReturn ? <ReturnEmptyPanel /> : null}
-
-            {!isLoadingDetail && activeReturn ? (
-                <ReturnForm
-                    key={`${activeScanPayload?.Type ?? 'RETURN'}-${
-                        activeScanPayload?.DeliveryCode ??
-                        activeScanPayload?.OrderCode ??
-                        activeScanPayload?.OrderCodeRef ??
-                        activeScanPayload?.PackageCode ??
-                        activeReturn.OrderCode
-                    }`}
-                    activeReturn={activeReturn}
-                    activeScanPayload={activeScanPayload}
-                    hasLayout={hasLayout}
-                    isConfirming={isConfirming}
-                />
-            ) : null}
+            <ReturnForm
+                activeReturn={activeReturn}
+                activeScanPayload={activeScanPayload}
+                hasLayout={hasLayout}
+                isConfirming={isConfirming}
+            />
         </section>
     )
 }
